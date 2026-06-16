@@ -1,9 +1,35 @@
+'use client';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sun } from 'lucide-react';
 import Link from 'next/link';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { loginWithEmail } from '@/lib/auth';
 
 export default function LoginPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState('admin@solar.com');
+  const [password, setPassword] = useState('password123');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [rememberMe, setRememberMe] = useState(true);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    try {
+      await loginWithEmail(email, password);
+      router.push('/dashboard');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed');
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
     <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
       {/* Left Side - Form */}
@@ -24,7 +50,13 @@ export default function LoginPage() {
           </p>
 
           {/* Form */}
-          <form className="space-y-4">
+          <form onSubmit={handleLogin} className="space-y-4">
+            {error && (
+              <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                {error}
+              </div>
+            )}
+            
             <div>
               <label className="mb-2 block text-sm font-medium text-foreground">
                 Email
@@ -32,7 +64,10 @@ export default function LoginPage() {
               <Input
                 type="email"
                 placeholder="admin@solar.com"
-                defaultValue="admin@solar.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
+                required
                 className="w-full"
               />
             </div>
@@ -44,7 +79,10 @@ export default function LoginPage() {
               <Input
                 type="password"
                 placeholder="Enter your password"
-                defaultValue="password123"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+                required
                 className="w-full"
               />
             </div>
@@ -53,26 +91,31 @@ export default function LoginPage() {
               <label className="flex items-center gap-2">
                 <input
                   type="checkbox"
-                  defaultChecked
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  disabled={loading}
                   className="h-4 w-4 rounded border-input bg-card"
                 />
                 <span className="text-sm text-muted-foreground">
                   Remember me
                 </span>
               </label>
-              <a
-                href="#"
+              <button
+                type="button"
+                onClick={() => {}}
                 className="text-sm font-medium text-primary hover:underline"
               >
                 Forgot password?
-              </a>
+              </button>
             </div>
 
-            <Link href="/dashboard">
-              <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
-                Sign In
-              </Button>
-            </Link>
+            <Button 
+              type="submit"
+              disabled={loading}
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              {loading ? 'Signing in...' : 'Sign In'}
+            </Button>
           </form>
 
           {/* Footer */}
