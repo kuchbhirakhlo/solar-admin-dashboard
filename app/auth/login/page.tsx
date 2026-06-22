@@ -24,6 +24,9 @@ export default function LoginPage() {
 
     try {
       await loginWithEmail(email, password);
+      // Store session data in sessionStorage
+      sessionStorage.setItem('isAuthenticated', 'true');
+      sessionStorage.setItem('loginTimestamp', Date.now().toString());
       router.push('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
