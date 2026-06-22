@@ -1,7 +1,10 @@
+'use client';
+
+import { useFirestoreCollectionRealtime } from '@/lib/hooks/useFirestore';
 import { PageHeader } from '@/components/layout/page-header';
 import { Button } from '@/components/ui/button';
 import { Bell, AlertCircle, CheckCircle, Info, Trash2 } from 'lucide-react';
-import { MOCK_NOTIFICATIONS } from '@/lib/constants';
+import { Notification } from '@/lib/services/notifications';
 
 const ICON_MAP: Record<string, React.ReactNode> = {
   info: <Info size={20} className="text-blue-500" />,
@@ -11,6 +14,8 @@ const ICON_MAP: Record<string, React.ReactNode> = {
 };
 
 export default function NotificationsPage() {
+  const { data: notifications, loading, error } = useFirestoreCollectionRealtime<Notification>('notifications');
+
   const formatTime = (date: Date) => {
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
@@ -25,6 +30,22 @@ export default function NotificationsPage() {
     const diffDays = Math.floor(diffHours / 24);
     return `${diffDays}d ago`;
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <p className="text-muted-foreground">Loading notifications...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <p className="text-red-500">Failed to load notifications: {error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -57,7 +78,7 @@ export default function NotificationsPage() {
 
       {/* Notifications List */}
       <div className="px-6 py-6 space-y-3">
-        {MOCK_NOTIFICATIONS.map((notification, idx) => (
+        {notifications?.map((notification, idx) => (
           <div
             key={notification.id}
             className={`rounded-lg border p-4 flex gap-4 items-start transition-all ${

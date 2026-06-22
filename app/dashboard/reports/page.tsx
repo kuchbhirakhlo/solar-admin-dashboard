@@ -1,46 +1,32 @@
+'use client';
+
+import { useFirestoreCollectionRealtime } from '@/lib/hooks/useFirestore';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/layout/page-header';
 import { Download, Calendar, Filter } from 'lucide-react';
-
-const REPORTS = [
-  {
-    id: '1',
-    title: 'Monthly Revenue Report',
-    description: 'Complete revenue breakdown for January 2024',
-    date: '2024-02-01',
-    size: '2.4 MB',
-  },
-  {
-    id: '2',
-    title: 'Customer Acquisition Report',
-    description: 'New customer analytics and demographics',
-    date: '2024-01-31',
-    size: '1.8 MB',
-  },
-  {
-    id: '3',
-    title: 'Installation Performance Report',
-    description: 'Installation completion rates and engineer performance',
-    date: '2024-01-30',
-    size: '3.2 MB',
-  },
-  {
-    id: '4',
-    title: 'Service Request Analysis',
-    description: 'Service request trends and resolution times',
-    date: '2024-01-29',
-    size: '2.1 MB',
-  },
-  {
-    id: '5',
-    title: 'Subscription Analytics',
-    description: 'Subscription tier distribution and churn analysis',
-    date: '2024-01-28',
-    size: '1.5 MB',
-  },
-];
+import { Report } from '@/lib/services/reports';
 
 export default function ReportsPage() {
+  const { data: reports, loading, error } = useFirestoreCollectionRealtime<Report>('reports');
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <p className="text-muted-foreground">Loading reports...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <p className="text-red-500">Failed to load reports: {error}</p>
+      </div>
+    );
+  }
+
+  const displayReports = reports ?? [];
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -73,7 +59,7 @@ export default function ReportsPage() {
       {/* Reports Grid */}
       <div className="px-6 py-6">
         <div className="grid gap-4 md:grid-cols-2">
-          {REPORTS.map((report) => (
+          {displayReports.map((report) => (
             <div
               key={report.id}
               className="rounded-lg border border-border bg-card p-6 hover:shadow-lg transition-all"
@@ -98,13 +84,13 @@ export default function ReportsPage() {
                 <div>
                   <p className="text-xs text-muted-foreground">Generated</p>
                   <p className="text-sm font-medium text-foreground">
-                    {report.date}
+                    {report.generatedAt instanceof Date ? report.generatedAt.toISOString().split('T')[0] : report.generatedAt}
                   </p>
                 </div>
                 <div className="text-right">
                   <p className="text-xs text-muted-foreground">File Size</p>
                   <p className="text-sm font-medium text-foreground">
-                    {report.size}
+                    {report.fileSize}
                   </p>
                 </div>
               </div>

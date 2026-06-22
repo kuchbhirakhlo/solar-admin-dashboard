@@ -1,12 +1,33 @@
+'use client';
+
+import { useFirestoreCollectionRealtime } from '@/lib/hooks/useFirestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/layout/page-header';
 import { StatusBadge } from '@/components/dashboard/status-badge';
 import { Search, Plus, ChevronRight } from 'lucide-react';
-import { MOCK_CUSTOMERS } from '@/lib/constants';
+import { Customer } from '@/lib/services/customers';
 import Link from 'next/link';
 
 export default function CustomersPage() {
+  const { data: customers, loading, error } = useFirestoreCollectionRealtime<Customer>('customers');
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <p className="text-muted-foreground">Loading customers...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <p className="text-red-500">Failed to load customers: {error}</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -71,7 +92,7 @@ export default function CustomersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {MOCK_CUSTOMERS.map((customer) => (
+              {customers?.map((customer) => (
                 <tr
                   key={customer.id}
                   className="hover:bg-muted/50 transition-colors"
@@ -110,11 +131,11 @@ export default function CustomersPage() {
           </table>
         </div>
 
-        {/* Pagination */}
-        <div className="mt-4 flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            Showing {MOCK_CUSTOMERS.length} customers
-          </p>
+          {/* Pagination */}
+          <div className="mt-4 flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              Showing {customers?.length ?? 0} customers
+            </p>
           <div className="flex gap-2">
             <Button variant="outline">Previous</Button>
             <Button variant="outline">Next</Button>

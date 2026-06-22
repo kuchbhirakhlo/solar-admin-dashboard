@@ -9,10 +9,14 @@ import {
   doc,
   getDocs,
   getDoc,
+  setDoc,
   query,
   where,
   QueryConstraint,
   Timestamp,
+  onSnapshot,
+  Unsubscribe,
+  Query,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -111,6 +115,23 @@ export async function addFirestoreDoc<T extends Record<string, any>>(
   }
 }
 
+export async function addFirestoreDocWithAutoId<T extends Record<string, any>>(
+  collectionName: string,
+  data: T
+) {
+  try {
+    const docRef = doc(collection(db, collectionName));
+    await setDoc(docRef, {
+      ...data,
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+    });
+    return docRef.id;
+  } catch (error) {
+    throw new Error(error instanceof Error ? error.message : 'Failed to add document with auto ID');
+  }
+}
+
 export async function updateFirestoreDoc<T extends Record<string, any>>(
   collectionName: string,
   docId: string,
@@ -134,4 +155,76 @@ export async function deleteFirestoreDoc(collectionName: string, docId: string) 
   } catch (error) {
     throw new Error(error instanceof Error ? error.message : 'Failed to delete document');
   }
+}
+
+export function useFirestoreCollectionRealtime<T extends { id?: string }>(
+  collectionName: string,
+  constraints?: QueryConstraint[]
+) {
+  const [data, setData] = useState<T[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const q = query(collection(db, collectionName), ...(constraints || []));
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const items = snapshot.docs.map((d) => ({
+          ...(d.data() as T),
+          id: d.id,
+        }));
+        setData(items);
+        setLoading(false);
+        setError(null);
+      },
+      (err) => {
+        setError(err instanceof Error ? err.message : 'Realtime listener error');
+        setLoading(false);
+      }
+    );
+
+    return () => {
+      unsubscribe();
+    };
+  }, [collectionName, JSON.stringify(constraints)]);
+
+  return { data, loading, error };
+}
+
+export function useFirestoreDocRealtime<T extends { id?: string }>(
+  collectionName: string,
+  docId: string
+) {
+  const [data, setData] = useState<T | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const docRef = doc(db, collectionName, docId);
+
+    const unsubscribe = onSnapshot(
+      docRef,
+      (snapshot) => {
+        if (snapshot.exists()) {
+          setData({ ...(snapshot.data() as T), id: snapshot.id });
+        } else {
+          setError('Document not found');
+          setData(null);
+        }
+        setLoading(false);
+      },
+      (err) => {
+        setError(err instanceof Error ? err.message : 'Realtime listener error');
+        setLoading(false);
+      }
+    );
+
+    return () => {
+      unsubscribe();
+    };
+  }, [collectionName, docId]);
+
+  return { data, loading, error };
 }

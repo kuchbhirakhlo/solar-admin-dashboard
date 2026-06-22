@@ -71,7 +71,7 @@ export default function SettingsPage() {
                 Company Name
               </label>
               <Input
-                defaultValue="SolarFlow Inc"
+                defaultValue="SolarXpert Inc"
                 placeholder="Your company name"
               />
             </div>
@@ -80,7 +80,7 @@ export default function SettingsPage() {
                 Email
               </label>
               <Input
-                defaultValue="admin@solarflow.com"
+                defaultValue="admin@SolarXpert.com"
                 placeholder="Contact email"
               />
             </div>
@@ -98,7 +98,7 @@ export default function SettingsPage() {
                 Website
               </label>
               <Input
-                defaultValue="www.solarflow.com"
+                defaultValue="www.SolarXpert.com"
                 placeholder="Company website"
               />
             </div>

@@ -107,7 +107,7 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
             {!collapsed && (
               <div className="flex flex-col">
                 <span className="text-sm font-bold text-sidebar-foreground">
-                  SolarFlow
+                  SolarXpert
                 </span>
                 <span className="text-xs text-sidebar-foreground/60">Admin</span>
               </div>

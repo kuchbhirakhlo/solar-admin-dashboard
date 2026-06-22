@@ -1,17 +1,27 @@
+'use client';
+
+import { useFirestoreCollectionRealtime } from '@/lib/hooks/useFirestore';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/layout/page-header';
 import { StatCard } from '@/components/dashboard/stat-card';
 import { Users, Zap, Briefcase, DollarSign } from 'lucide-react';
-import { MOCK_STATS, MOCK_CUSTOMERS, MOCK_SERVICES } from '@/lib/constants';
+import { Customer } from '@/lib/services/customers';
+import { ServiceRequest } from '@/lib/services/serviceRequests';
 import { StatusBadge } from '@/components/dashboard/status-badge';
 
 export default function DashboardPage() {
+  const { data: customers, loading: customersLoading } = useFirestoreCollectionRealtime<Customer>('customers');
+  const { data: services, loading: servicesLoading } = useFirestoreCollectionRealtime<ServiceRequest>('serviceRequests');
+
+  const totalCustomers = customers?.length ?? 0;
+  const pendingServices = services?.filter((s) => s.status === 'pending' || s.status === 'in-progress').length ?? 0;
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
       <PageHeader
         title="Dashboard"
-        description="Welcome back! Here's your business overview."
+        description="Welcome back! Here's your business overview in India."
       />
 
       {/* Stats Grid */}
@@ -19,37 +29,37 @@ export default function DashboardPage() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <StatCard
             title="Total Customers"
-            value={MOCK_STATS.totalCustomers}
+            value={totalCustomers}
             icon={<Users size={24} />}
             trend={{
-              value: MOCK_STATS.customerGrowth,
+              value: 0,
               isPositive: true,
             }}
           />
           <StatCard
             title="Active Subscriptions"
-            value={MOCK_STATS.activeSubscriptions}
+            value={totalCustomers}
             icon={<Zap size={24} />}
             trend={{
-              value: MOCK_STATS.subscriptionGrowth,
+              value: 0,
               isPositive: true,
             }}
           />
           <StatCard
             title="Pending Services"
-            value={MOCK_STATS.pendingServices}
+            value={pendingServices}
             icon={<Briefcase size={24} />}
             trend={{
-              value: Math.abs(MOCK_STATS.serviceGrowth),
+              value: 0,
               isPositive: false,
             }}
           />
           <StatCard
-            title="Total Revenue"
-            value={MOCK_STATS.totalRevenue}
+            title="Total Revenue (INR)"
+            value={'₹0'}
             icon={<DollarSign size={24} />}
             trend={{
-              value: MOCK_STATS.revenueGrowth,
+              value: 0,
               isPositive: true,
             }}
           />
@@ -72,7 +82,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="divide-y divide-border">
-            {MOCK_CUSTOMERS.slice(0, 4).map((customer) => (
+            {customers?.slice(0, 4).map((customer) => (
               <div key={customer.id} className="flex items-center justify-between px-6 py-4">
                 <div>
                   <p className="font-medium text-foreground">{customer.name}</p>
@@ -98,7 +108,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="divide-y divide-border">
-            {MOCK_SERVICES.map((service) => (
+            {services?.map((service) => (
               <div
                 key={service.id}
                 className="flex items-center justify-between px-6 py-4"

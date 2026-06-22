@@ -3,6 +3,7 @@ import {
   updateFirestoreDoc,
   deleteFirestoreDoc,
 } from '@/lib/hooks/useFirestore';
+import { addUser } from './users';
 
 export interface Customer {
   id?: string;
@@ -17,16 +18,71 @@ export interface Customer {
   installationDate: string;
   status: 'active' | 'pending' | 'inactive';
   monthlyUsage: number;
+  location?: string;
+  totalSpent?: number;
   createdAt?: string;
   updatedAt?: string;
+  alternatePhone?: string;
+  connectionNumber?: string;
+  documents?: {
+    aadhaarFront?: string;
+    aadhaarBack?: string;
+    panCard?: string;
+    bankPassbook?: string;
+    electricityBill?: string;
+    gpsPhoto?: string;
+    ownershipDocument?: string;
+  };
 }
 
 /**
- * Add a new customer to Firestore
+ * Add a new customer to Firestore and create a user account
  */
 export async function addCustomer(customer: Omit<Customer, 'id'>) {
   try {
-    const docId = await addFirestoreDoc('customers', customer);
+    const cleanedData: Record<string, unknown> = {};
+    
+    for (const [key, value] of Object.entries(customer)) {
+      if (value !== undefined && value !== null && value !== '') {
+        if (typeof value === 'object' && !Array.isArray(value)) {
+          const nestedCleaned: Record<string, unknown> = {};
+          for (const [nestedKey, nestedValue] of Object.entries(value)) {
+            if (nestedValue !== undefined && nestedValue !== null && nestedValue !== '') {
+              nestedCleaned[nestedKey] = nestedValue;
+            }
+          }
+          if (Object.keys(nestedCleaned).length > 0) {
+            cleanedData[key] = nestedCleaned;
+          }
+        } else {
+          cleanedData[key] = value;
+        }
+      }
+    }
+
+    const customerData = {
+      ...cleanedData,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const docId = await addFirestoreDoc('customers', customerData);
+
+    await addUser({
+      name: customer.name,
+      email: customer.email,
+      phone: customer.phone,
+      address: customer.address,
+      city: customer.city,
+      state: customer.state,
+      zipCode: customer.zipCode,
+      role: 'customer',
+      status: 'active',
+      customerId: docId,
+      createdAt: customerData.createdAt,
+      updatedAt: customerData.updatedAt,
+    });
+
     return docId;
   } catch (error) {
     throw new Error(`Failed to add customer: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -38,7 +94,10 @@ export async function addCustomer(customer: Omit<Customer, 'id'>) {
  */
 export async function updateCustomer(customerId: string, updates: Partial<Customer>) {
   try {
-    await updateFirestoreDoc('customers', customerId, updates);
+    await updateFirestoreDoc('customers', customerId, {
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    });
   } catch (error) {
     throw new Error(`Failed to update customer: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }

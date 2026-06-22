@@ -1,16 +1,42 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/layout/page-header';
 import { StatusBadge } from '@/components/dashboard/status-badge';
-import { Mail, Phone, MapPin, Calendar, Zap, DollarSign } from 'lucide-react';
-import { MOCK_CUSTOMERS } from '@/lib/constants';
+import { Mail, Phone, MapPin, Calendar, Zap, DollarSign, FileText } from 'lucide-react';
+import { Customer } from '@/lib/services/customers';
+import { useFirestoreDoc } from '@/lib/hooks/useFirestore';
+import { db } from '@/lib/firebase';
 
 export default function CustomerDetailPage({
   params,
 }: {
   params: { id: string };
 }) {
-  const customer = MOCK_CUSTOMERS.find((c) => c.id === params.id) ||
-    MOCK_CUSTOMERS[0];
+  const { data: customerData, loading, error } = useFirestoreDoc<Customer>('customers', params.id);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <p className="text-muted-foreground">Loading customer details...</p>
+      </div>
+    );
+  }
+
+  if (error || !customerData || Array.isArray(customerData)) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <p className="text-red-600">Error loading customer details</p>
+      </div>
+    );
+  }
+
+  const customer = customerData;
+
+  const fullAddress = [customer.address, customer.city, customer.state, customer.zipCode]
+    .filter(Boolean)
+    .join(', ');
 
   return (
     <div className="space-y-6">
@@ -53,15 +79,24 @@ export default function CustomerDetailPage({
               <div className="flex items-center gap-3">
                 <Phone size={20} className="text-muted-foreground" />
                 <div>
-                  <p className="text-sm text-muted-foreground">Phone</p>
+                  <p className="text-sm text-muted-foreground">Mobile Number</p>
                   <p className="font-medium text-foreground">{customer.phone}</p>
                 </div>
               </div>
+              {customer.alternatePhone && (
+                <div className="flex items-center gap-3">
+                  <Phone size={20} className="text-muted-foreground" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Alternate Mobile Number</p>
+                    <p className="font-medium text-foreground">{customer.alternatePhone}</p>
+                  </div>
+                </div>
+              )}
               <div className="flex items-center gap-3">
                 <MapPin size={20} className="text-muted-foreground" />
                 <div>
-                  <p className="text-sm text-muted-foreground">Location</p>
-                  <p className="font-medium text-foreground">{customer.location}</p>
+                  <p className="text-sm text-muted-foreground">Address</p>
+                  <p className="font-medium text-foreground">{fullAddress}</p>
                 </div>
               </div>
             </div>
@@ -76,22 +111,147 @@ export default function CustomerDetailPage({
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">System Size</p>
+                  <p className="text-sm text-muted-foreground">Connection Number</p>
+                  <p className="mt-1 font-medium text-foreground">{customer.connectionNumber || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Plant Size</p>
                   <p className="mt-1 flex items-center gap-2 font-medium text-foreground">
                     <Zap size={18} className="text-primary" />
-                    {customer.systemSize}
+                    {customer.systemSize} kW
                   </p>
                 </div>
-                <div className="text-right">
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
                   <p className="text-sm text-muted-foreground">Installation Date</p>
-                  <p className="mt-1 flex items-center justify-end gap-2 font-medium text-foreground">
+                  <p className="mt-1 flex items-center gap-2 font-medium text-foreground">
                     <Calendar size={18} className="text-primary" />
-                    {customer.installDate}
+                    {customer.installationDate}
                   </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Status</p>
+                  <div className="mt-1">
+                    <StatusBadge status={customer.status} />
+                  </div>
                 </div>
               </div>
             </div>
           </div>
+
+          {/* Documents */}
+          {customer.documents && (
+            <div className="rounded-lg border border-border bg-card p-6">
+              <h2 className="mb-6 text-lg font-semibold text-foreground">
+                Documents
+              </h2>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                {customer.documents.aadhaarFront && (
+                  <a
+                    href={customer.documents.aadhaarFront}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 rounded-lg border border-border p-3 hover:bg-muted transition-colors"
+                  >
+                    <FileText size={20} className="text-primary" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Aadhaar Card (Front)</p>
+                      <p className="text-xs text-muted-foreground">View Document</p>
+                    </div>
+                  </a>
+                )}
+                {customer.documents.aadhaarBack && (
+                  <a
+                    href={customer.documents.aadhaarBack}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 rounded-lg border border-border p-3 hover:bg-muted transition-colors"
+                  >
+                    <FileText size={20} className="text-primary" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Aadhaar Card (Back)</p>
+                      <p className="text-xs text-muted-foreground">View Document</p>
+                    </div>
+                  </a>
+                )}
+                {customer.documents.panCard && (
+                  <a
+                    href={customer.documents.panCard}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 rounded-lg border border-border p-3 hover:bg-muted transition-colors"
+                  >
+                    <FileText size={20} className="text-primary" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">PAN Card</p>
+                      <p className="text-xs text-muted-foreground">View Document</p>
+                    </div>
+                  </a>
+                )}
+                {customer.documents.bankPassbook && (
+                  <a
+                    href={customer.documents.bankPassbook}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 rounded-lg border border-border p-3 hover:bg-muted transition-colors"
+                  >
+                    <FileText size={20} className="text-primary" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Bank Passbook</p>
+                      <p className="text-xs text-muted-foreground">View Document</p>
+                    </div>
+                  </a>
+                )}
+                {customer.documents.electricityBill && (
+                  <a
+                    href={customer.documents.electricityBill}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 rounded-lg border border-border p-3 hover:bg-muted transition-colors"
+                  >
+                    <FileText size={20} className="text-primary" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Electricity Bill</p>
+                      <p className="text-xs text-muted-foreground">View Document</p>
+                    </div>
+                  </a>
+                )}
+                {customer.documents.gpsPhoto && (
+                  <a
+                    href={customer.documents.gpsPhoto}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 rounded-lg border border-border p-3 hover:bg-muted transition-colors"
+                  >
+                    <FileText size={20} className="text-primary" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">GPS Photo</p>
+                      <p className="text-xs text-muted-foreground">View Document</p>
+                    </div>
+                  </a>
+                )}
+                {customer.documents.ownershipDocument && (
+                  <a
+                    href={customer.documents.ownershipDocument}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 rounded-lg border border-border p-3 hover:bg-muted transition-colors"
+                  >
+                    <FileText size={20} className="text-primary" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Ownership Document</p>
+                      <p className="text-xs text-muted-foreground">View Document</p>
+                    </div>
+                  </a>
+                )}
+              </div>
+              {(!customer.documents || Object.keys(customer.documents).length === 0) && (
+                <p className="text-sm text-muted-foreground">No documents uploaded</p>
+              )}
+            </div>
+          )}
 
           {/* Recent Services */}
           <div className="rounded-lg border border-border bg-card p-6">
@@ -126,7 +286,7 @@ export default function CustomerDetailPage({
           <div className="rounded-lg border border-border bg-card p-6">
             <p className="text-sm text-muted-foreground">Status</p>
             <div className="mt-3">
-              <StatusBadge status={customer.status as any} />
+              <StatusBadge status={customer.status} />
             </div>
           </div>
 
@@ -141,7 +301,7 @@ export default function CustomerDetailPage({
                 <p className="text-sm text-muted-foreground">Total Spent</p>
                 <p className="mt-1 flex items-center gap-2 text-2xl font-bold text-foreground">
                   <DollarSign size={24} className="text-green-600" />
-                  {customer.totalSpent}
+                  {customer.totalSpent || 0}
                 </p>
               </div>
 

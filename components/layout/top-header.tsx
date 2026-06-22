@@ -1,7 +1,8 @@
 'use client';
 
-import { Search, Bell, Menu, ChevronDown } from 'lucide-react';
+import { Search, Bell, Menu, ChevronDown, LogOut } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { logout } from '@/lib/auth';
 
 interface TopHeaderProps {
   onMenuClick?: () => void;
@@ -40,14 +41,14 @@ export function TopHeader({ onMenuClick }: TopHeaderProps) {
             <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500" />
           </button>
 
-          {/* Profile Dropdown */}
-          <button className="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-muted">
-            <div className="h-8 w-8 rounded-full bg-primary/20" />
-            <div className="hidden flex-col items-start lg:flex">
-              <span className="text-sm font-medium text-foreground">Admin</span>
-              <span className="text-xs text-muted-foreground">Manager</span>
-            </div>
-            <ChevronDown size={16} className="text-muted-foreground" />
+          {/* Logout Button */}
+          <button
+            onClick={() => logout()}
+            className="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-muted"
+            title="Logout"
+          >
+            <LogOut size={20} className="text-foreground" />
+            <span className="hidden text-sm font-medium text-foreground lg:block">Logout</span>
           </button>
         </div>
       </div>

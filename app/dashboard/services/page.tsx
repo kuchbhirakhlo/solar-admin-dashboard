@@ -1,11 +1,32 @@
+'use client';
+
+import { useFirestoreCollectionRealtime } from '@/lib/hooks/useFirestore';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/layout/page-header';
 import { StatusBadge } from '@/components/dashboard/status-badge';
 import { Plus, ChevronRight, Calendar, User, Wrench } from 'lucide-react';
-import { MOCK_SERVICES } from '@/lib/constants';
+import { ServiceRequest } from '@/lib/services/serviceRequests';
 import Link from 'next/link';
 
 export default function ServicesPage() {
+  const { data: services, loading, error } = useFirestoreCollectionRealtime<ServiceRequest>('serviceRequests');
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <p className="text-muted-foreground">Loading service requests...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <p className="text-red-500">Failed to load service requests: {error}</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -22,7 +43,7 @@ export default function ServicesPage() {
 
       {/* Services List */}
       <div className="px-6 py-6 space-y-4">
-        {MOCK_SERVICES.map((service) => (
+        {services?.map((service) => (
           <Link key={service.id} href={`/dashboard/services/${service.id}`}>
             <div className="rounded-lg border border-border bg-card p-6 transition-all hover:shadow-lg hover:border-primary/50 cursor-pointer">
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-6">

@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { loginWithEmail } from '@/lib/auth';
+import Image from 'next/image';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -24,6 +25,7 @@ export default function LoginPage() {
     try {
       await loginWithEmail(email, password);
       router.push('/dashboard');
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
@@ -37,10 +39,15 @@ export default function LoginPage() {
         <div className="w-full max-w-sm">
           {/* Logo */}
           <div className="mb-8 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-              <Sun size={24} className="text-primary-foreground" />
+            <div className="flex h-24 w-24 items-center justify-center rounded-lg ">
+              <Image 
+            src="/logo.png" 
+            alt="SolarXpert Logo"
+            width={24}
+            height={24}
+            className="object-cover rounded-full w-full h-full"
+          />
             </div>
-            <h1 className="text-2xl font-bold text-foreground">SolarFlow</h1>
           </div>
 
           {/* Heading */}
@@ -131,8 +138,15 @@ export default function LoginPage() {
       {/* Right Side - Branding */}
       <div className="hidden bg-gradient-to-br from-primary/10 via-secondary/5 to-background lg:flex flex-col items-center justify-center p-12">
         <div className="max-w-md text-center">
-          <div className="mb-8 flex h-24 w-24 items-center justify-center rounded-2xl bg-primary/20 mx-auto">
-            <Sun size={48} className="text-primary" />
+          <div className="mb-8 flex h-48 w-48 items-center justify-center rounded-full  mx-auto">
+         <Image 
+            src="/logo.png" 
+            alt="SolarXpert Logo"
+            width={48}
+            height={48}
+            className="object-contain rounded-3xl w-full h-full"
+          />
+
           </div>
           <h2 className="mb-4 text-3xl font-bold text-foreground">
             Solar Energy Management

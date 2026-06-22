@@ -44,7 +44,7 @@ export default function AddEngineerPage() {
                   <label className="block text-sm font-medium text-foreground mb-2">
                     Email
                   </label>
-                  <Input type="email" placeholder="thomas@solarflow.com" />
+                  <Input type="email" placeholder="thomas@SolarXpert.com" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
