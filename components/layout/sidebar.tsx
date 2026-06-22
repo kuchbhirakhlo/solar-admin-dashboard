@@ -11,9 +11,6 @@ import {
   Briefcase,
   BarChart3,
   Settings,
-  Bell,
-  CreditCard,
-  ChevronDown,
   Sun,
   Menu,
   X,
@@ -52,18 +49,6 @@ const navItems: NavItem[] = [
     href: '/dashboard/installations',
     icon: <BarChart3 size={20} />,
   },
-  {
-    name: 'Payments',
-    href: '/dashboard/payments',
-    icon: <CreditCard size={20} />,
-  },
-  { name: 'Reports', href: '/dashboard/reports', icon: <BarChart3 size={20} /> },
-  {
-    name: 'Notifications',
-    href: '/dashboard/notifications',
-    icon: <Bell size={20} />,
-    badge: '3',
-  },
   { name: 'Settings', href: '/dashboard/settings', icon: <Settings size={20} /> },
 ];
 
@@ -77,6 +62,11 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
 
   const isActive = (href: string) => {
+    // For the root dashboard, only match exact path to avoid highlighting
+    // Dashboard when on sub-pages like /dashboard/customers
+    if (href === '/dashboard') {
+      return pathname === '/dashboard';
+    }
     return pathname === href || pathname.startsWith(href + '/');
   };
 

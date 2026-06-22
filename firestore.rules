@@ -12,6 +12,11 @@ service cloud.firestore {
       return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
+    // Helper function to check if user is engineer
+    function isEngineer() {
+      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'engineer';
+    }
+
     // Customers collection
     match /customers/{customerId} {
       allow read: if isAuthenticated();
@@ -47,7 +52,7 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Users collection
+    // Users collection - users can read their own data
     match /users/{userId} {
       allow read: if isAuthenticated();
       allow write: if isAdmin() || request.auth.uid == userId;
@@ -61,17 +66,18 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Engineers collection
+    // Engineers collection - engineers can read, only admin can write/delete
     match /engineers/{engineerId} {
       allow read: if isAuthenticated();
       allow write: if isAdmin();
       allow delete: if isAdmin();
     }
 
-    // Installations collection
+    // Installations collection - engineers can create and read their own
     match /installations/{installationId} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin();
+      allow read: if isAdmin() || (isEngineer() && resource.data.engineerId == request.auth.uid);
+      allow create: if isAdmin() || isEngineer();
+      allow update: if isAdmin() || (isEngineer() && resource.data.engineerId == request.auth.uid);
       allow delete: if isAdmin();
     }
 

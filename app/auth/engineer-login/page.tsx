@@ -1,0 +1,177 @@
+'use client';
+
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Sun } from 'lucide-react';
+import Link from 'next/link';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase';
+import Image from 'next/image';
+
+export default function EngineerLoginPage() {
+  const router = useRouter();
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Find engineer by phone number in Firestore
+      const { collection, query, where, getDocs } = await import('firebase/firestore');
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where('phone', '==', phone), where('role', '==', 'engineer'));
+      const snapshot = await getDocs(q);
+
+      if (snapshot.empty) {
+        throw new Error('No engineer account found with this phone number');
+      }
+
+      const userDoc = snapshot.docs[0];
+      const userData = userDoc.data();
+      const email = userData.email;
+
+      if (!email) {
+        throw new Error('Engineer account has no email associated');
+      }
+
+      // Sign in with email and password
+      const result = await signInWithEmailAndPassword(auth, email, password);
+
+      // Store session
+      sessionStorage.setItem('engineerAuthenticated', 'true');
+      sessionStorage.setItem('engineerUid', result.user.uid);
+      sessionStorage.setItem('engineerName', userData.name || '');
+      sessionStorage.setItem('engineerPhone', phone);
+
+      router.push('/engineer/dashboard');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
+      {/* Left Side - Form */}
+      <div className="flex flex-col items-center justify-center px-6 py-12 sm:px-12">
+        <div className="w-full max-w-sm">
+          {/* Logo */}
+          <div className="mb-8 flex items-center gap-3">
+            <div className="flex h-50 w-50 items-center justify-center rounded-lg">
+              <Image
+                src="/logo.png"
+                alt="SolarXpert Logo"
+                width={50}
+                height={50}
+                className="object-contain rounded-3xl w-full h-full"
+              />
+            </div>
+          </div>
+
+          {/* Heading */}
+          <h2 className="mb-2 text-3xl font-bold text-foreground">Engineer Portal</h2>
+          <p className="mb-8 text-muted-foreground">
+            Sign in with your registered mobile number
+          </p>
+
+          {/* Form */}
+          <form onSubmit={handleLogin} className="space-y-4">
+            {error && (
+              <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                {error}
+              </div>
+            )}
+
+            <div>
+              <label className="mb-2 block text-sm font-medium text-foreground">
+                Mobile Number
+              </label>
+              <Input
+                type="tel"
+                placeholder="+91 98765 43210"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                disabled={loading}
+                required
+                className="w-full"
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-medium text-foreground">
+                Password
+              </label>
+              <Input
+                type="password"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+                required
+                className="w-full"
+              />
+            </div>
+
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              {loading ? 'Signing in...' : 'Sign In'}
+            </Button>
+          </form>
+
+          {/* Footer */}
+          <p className="mt-8 text-center text-sm text-muted-foreground">
+            <Link href="/auth/login" className="font-medium text-primary hover:underline">
+              Admin Login
+            </Link>
+          </p>
+        </div>
+      </div>
+
+      {/* Right Side - Branding */}
+      <div className="hidden bg-gradient-to-br from-primary/10 via-secondary/5 to-background lg:flex flex-col items-center justify-center p-12">
+        <div className="max-w-md text-center">
+          <div className="mb-8 flex h-48 w-48 items-center justify-center rounded-full bg-primary/20 mx-auto">
+            <Image
+              src="/logo.png"
+              alt="SolarXpert Logo"
+              width={80}
+              height={100}
+              className="object-contain rounded-full w-full h-full"
+            />
+          </div>
+          <h2 className="mb-4 text-3xl font-bold text-foreground">
+            Engineer Workspace
+          </h2>
+          <p className="mb-8 text-lg text-muted-foreground">
+            Manage installations, update equipment details, and track your work
+          </p>
+          <ul className="space-y-4 text-left">
+            {[
+              'Look up customer information by mobile number',
+              'Record inverter and solar panel serial numbers',
+              'Log wiring details (AC, DC, Earthing)',
+              'Track your installation history',
+            ].map((item, i) => (
+              <li key={i} className="flex items-start gap-3">
+                <span className="mt-1 h-2 w-2 rounded-full bg-primary flex-shrink-0" />
+                <span className="text-sm text-muted-foreground">{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}

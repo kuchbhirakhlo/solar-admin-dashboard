@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, use } from 'react';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/layout/page-header';
 import { StatusBadge } from '@/components/dashboard/status-badge';
@@ -12,9 +12,10 @@ import { db } from '@/lib/firebase';
 export default function CustomerDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const { data: customerData, loading, error } = useFirestoreDoc<Customer>('customers', params.id);
+  const { id } = use(params);
+  const { data: customerData, loading, error } = useFirestoreDoc<Customer>('customers', id);
 
   if (loading) {
     return (
@@ -131,10 +132,20 @@ export default function CustomerDetailPage({
                   </p>
                 </div>
                 <div>
+                  <p className="text-sm text-muted-foreground">Monthly Usage</p>
+                  <p className="mt-1 font-medium text-foreground">{customer.monthlyUsage ? `${customer.monthlyUsage} kWh` : 'N/A'}</p>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
                   <p className="text-sm text-muted-foreground">Status</p>
                   <div className="mt-1">
                     <StatusBadge status={customer.status} />
                   </div>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Customer Since</p>
+                  <p className="mt-1 font-medium text-foreground">{customer.createdAt ? new Date(customer.createdAt).toLocaleDateString() : 'N/A'}</p>
                 </div>
               </div>
             </div>

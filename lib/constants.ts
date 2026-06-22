@@ -195,8 +195,5 @@ export const DASHBOARD_MENU = [
   { label: 'Subscriptions', value: 'subscriptions' },
   { label: 'Services', value: 'services' },
   { label: 'Installations', value: 'installations' },
-  { label: 'Payments', value: 'payments' },
-  { label: 'Reports', value: 'reports' },
-  { label: 'Notifications', value: 'notifications' },
   { label: 'Settings', value: 'settings' },
 ];
