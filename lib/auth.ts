@@ -37,10 +37,7 @@ export async function loginWithEmail(email: string, password: string) {
       throw new Error('Access denied. Only admin accounts can access this dashboard.');
     }
 
-    // Get ID token and store in HTTP-only cookie for server-side auth checks
-    const idToken = await user.getIdToken();
-    
-    return { user, userData: userData as AdminUser, idToken };
+    return { user, userData: userData as AdminUser };
   } catch (error) {
     // If it's already one of our custom errors, re-throw as-is
     if (error instanceof Error && (
@@ -70,10 +67,6 @@ export async function registerWithEmail(
 export async function logout() {
   try {
     await signOut(auth);
-    // Clear the session cookie on client side
-    if (typeof document !== 'undefined') {
-      document.cookie = 'session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax';
-    }
   } catch (error) {
     throw new Error(error instanceof Error ? error.message : 'Logout failed');
   }

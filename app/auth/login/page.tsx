@@ -25,7 +25,6 @@ export default function LoginPage() {
     try {
       await loginWithEmail(email, password);
       router.push('/dashboard');
-      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
@@ -39,13 +38,13 @@ export default function LoginPage() {
         <div className="w-full max-w-sm">
           {/* Logo */}
           <div className="mb-8 flex items-center gap-3">
-            <div className="flex h-24 w-24 items-center justify-center rounded-lg ">
+            <div className="flex h-50 w-50 items-center justify-center rounded-lg ">
               <Image 
             src="/logo.png" 
             alt="SolarXpert Logo"
-            width={24}
-            height={24}
-            className="object-cover rounded-full w-full h-full"
+            width={50}
+            height={50}
+            className="object-contain rounded-3xl w-full h-full"
           />
             </div>
           </div>
@@ -138,13 +137,13 @@ export default function LoginPage() {
       {/* Right Side - Branding */}
       <div className="hidden bg-gradient-to-br from-primary/10 via-secondary/5 to-background lg:flex flex-col items-center justify-center p-12">
         <div className="max-w-md text-center">
-          <div className="mb-8 flex h-48 w-48 items-center justify-center rounded-full  mx-auto">
+          <div className="mb-8 flex h-48 w-48 items-center justify-center rounded-full bg-primary/20 mx-auto">
          <Image 
             src="/logo.png" 
             alt="SolarXpert Logo"
-            width={48}
-            height={48}
-            className="object-contain rounded-3xl w-full h-full"
+            width={80}
+            height={100}
+            className="object-contain rounded-full w-full h-full"
           />
 
           </div>

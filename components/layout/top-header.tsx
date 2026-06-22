@@ -2,6 +2,7 @@
 
 import { Search, Bell, Menu, ChevronDown, LogOut } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { useRouter } from 'next/navigation';
 import { logout } from '@/lib/auth';
 
 interface TopHeaderProps {
@@ -9,6 +10,21 @@ interface TopHeaderProps {
 }
 
 export function TopHeader({ onMenuClick }: TopHeaderProps) {
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      // Clear any client-side storage
+      localStorage.clear();
+      sessionStorage.clear();
+      // Redirect to login page
+      router.push('/auth/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-card">
       <div className="flex items-center justify-between px-6 py-4">
@@ -43,7 +59,7 @@ export function TopHeader({ onMenuClick }: TopHeaderProps) {
 
           {/* Logout Button */}
           <button
-            onClick={() => logout()}
+            onClick={handleLogout}
             className="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-muted"
             title="Logout"
           >
