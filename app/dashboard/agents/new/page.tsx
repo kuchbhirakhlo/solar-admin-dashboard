@@ -66,7 +66,7 @@ export default function AddAgentPage() {
         title="Add New Agent"
         description="Create a new sales agent account"
         breadcrumbs={[
-          { label: 'Agents', href: '/dashboard/agents' },
+          { label: 'Partner', href: '/dashboard/agents' },
           { label: 'New Agent' },
         ]}
       />
@@ -210,7 +210,7 @@ export default function AddAgentPage() {
             <Button
               type="button"
               variant="outline"
-              onClick={() => router.push('/dashboard/agents')}
+              onClick={() => router.push('/dashboard/Partner')}
             >
               Cancel
             </Button>

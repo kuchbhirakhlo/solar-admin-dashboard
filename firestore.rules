@@ -2,78 +2,110 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper function to check if user is authenticated
+
+    // ============ HELPER FUNCTIONS ============
+
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    // Helper function to check if user is admin
+    // Safe role check: returns the role if the user document exists, otherwise null
+    function roleInCollection(collection) {
+      return get(/databases/$(database)/documents/$(collection)/$(request.auth.uid)).data.role;
+    }
+
+    // Check if authenticated user's email matches known admin emails
+    function isEmailAdmin() {
+      return request.auth.token.email == 'admin@solar.in'
+        || request.auth.token.email == 'SolarXpert@gmail.com';
+    }
+
+    // Admin check: looks in users collection, admins collection, or falls back to email
     function isAdmin() {
-      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return isAuthenticated()
+        && (roleInCollection('users') == 'admin'
+            || roleInCollection('admins') == 'admin'
+            || isEmailAdmin());
     }
 
-    // Helper function to check if user is engineer
     function isEngineer() {
-      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'engineer';
+      return isAuthenticated() && roleInCollection('users') == 'engineer';
     }
 
-    // Customers collection
-    match /customers/{customerId} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin();
-      allow delete: if isAdmin();
-    }
+    // ============ COLLECTION RULES ============
 
-    // Service Requests collection
-    match /serviceRequests/{requestId} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin();
-      allow delete: if isAdmin();
-    }
-
-    // Subscriptions collection
-    match /subscriptions/{subscriptionId} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin();
-      allow delete: if isAdmin();
-    }
-
-    // Notifications collection
-    match /notifications/{notificationId} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin();
-      allow delete: if isAdmin();
-    }
-
-    // Reports collection
-    match /reports/{reportId} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin();
-      allow delete: if isAdmin();
-    }
-
-    // Users collection - users can read their own data
+    // --- Users ---
+    // Admins can fully manage. Engineers/others can read.
     match /users/{userId} {
       allow read: if isAuthenticated();
-      allow write: if isAdmin() || request.auth.uid == userId;
+      allow create: if isAdmin() || request.auth.uid == userId;
+      allow update: if isAdmin() || request.auth.uid == userId;
       allow delete: if isAdmin();
     }
 
-    // Agents collection
-    match /agents/{agentId} {
+    // --- Admins ---
+    match /admins/{adminId} {
       allow read: if isAuthenticated();
-      allow write: if isAdmin();
+      allow write: if request.auth.uid == adminId;
+    }
+
+    // --- Customers ---
+    match /customers/{customerId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
       allow delete: if isAdmin();
     }
 
-    // Engineers collection - engineers can read, only admin can write/delete
+    // --- Service Requests ---
+    match /serviceRequests/{requestId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+
+    // --- Subscriptions ---
+    match /subscriptions/{subscriptionId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // --- Notifications ---
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // --- Reports ---
+    match /reports/{reportId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // --- Partner ---
+    match /Partner/{agentId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // --- Engineers ---
     match /engineers/{engineerId} {
       allow read: if isAuthenticated();
-      allow write: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
       allow delete: if isAdmin();
     }
 
-    // Installations collection - engineers can create and read their own
+    // --- Installations ---
     match /installations/{installationId} {
       allow read: if isAdmin() || (isEngineer() && resource.data.engineerId == request.auth.uid);
       allow create: if isAdmin() || isEngineer();
@@ -81,11 +113,17 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Payments collection
+    // --- Payments ---
     match /payments/{paymentId} {
       allow read: if isAuthenticated();
-      allow write: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
       allow delete: if isAdmin();
+    }
+
+    // --- Default: deny everything else ---
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

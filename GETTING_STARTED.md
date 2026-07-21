@@ -99,7 +99,7 @@ Create these collections with sample documents:
 }
 ```
 
-**Collection: `agents`**
+**Collection: `Partner`**
 ```json
 {
   "name": "Jane Smith",
@@ -142,7 +142,7 @@ Visit http://localhost:3000 in your browser.
       page.tsx          ← Customer list
       [id]/page.tsx     ← Customer details
       new/page.tsx      ← Add customer form
-    /agents
+    /Partner
       page.tsx          ← Agent list
       new/page.tsx      ← Add agent form
     /engineers/page.tsx
@@ -165,7 +165,7 @@ Visit http://localhost:3000 in your browser.
     useFirebaseStorage.ts ← Storage hook
   /services
     customers.ts        ← Customer operations
-    agents.ts           ← Agent operations
+    Partner.ts           ← Agent operations
 
 /components
   /layout
@@ -202,7 +202,7 @@ Then open [http://localhost:3000](http://localhost:3000)
 | `/auth/login` | Login page |
 | `/dashboard` | Main dashboard |
 | `/dashboard/customers` | Customer management |
-| `/dashboard/agents` | Agent management |
+| `/dashboard/Partner` | Agent management |
 | `/dashboard/engineers` | Engineer management |
 | `/dashboard/services` | Service requests |
 | `/dashboard/subscriptions` | Subscription plans |

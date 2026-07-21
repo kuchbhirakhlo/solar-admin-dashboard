@@ -16,18 +16,18 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 
-export default function AgentsPage() {
+export default function PartnerPage() {
   const { data: users, loading, error } =
     useFirestoreCollectionRealtime<User>('users', [
       where('role', '==', 'agent'),
     ]);
 
-  const agents = users;
+  const Partner = users;
 
   const [selectedAgent, setSelectedAgent] = useState<User | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const toggleAgentStatus = async (
+  const togglePartnertatus = async (
     agentId: string | undefined,
     currentStatus: string
   ) => {
@@ -50,10 +50,10 @@ export default function AgentsPage() {
     <div className="space-y-6">
       {/* Page Header */}
       <PageHeader
-        title="Sales Agents"
+        title="Sales Partner"
         description="Manage your sales team and track their performance"
         action={
-          <Link href="/dashboard/agents/new">
+          <Link href="/dashboard/Partner/new">
             <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
               <Plus size={20} className="mr-2" />
               Add Agent
@@ -62,10 +62,10 @@ export default function AgentsPage() {
         }
       />
 
-      {/* Agents Table */}
+      {/* Partner Table */}
       <div className="px-6 py-6">
         {error && (
-          <p className="text-sm text-red-500 mb-4">Failed to load agents: {error}</p>
+          <p className="text-sm text-red-500 mb-4">Failed to load Partner: {error}</p>
         )}
 
         <div className="rounded-lg border border-border bg-card overflow-hidden">
@@ -88,12 +88,12 @@ export default function AgentsPage() {
                       colSpan={6}
                       className="px-6 py-4 text-center text-muted-foreground"
                     >
-                      Loading agents...
+                      Loading Partner...
                     </td>
                   </tr>
                 )}
                 {!loading &&
-                  agents?.map((agent) => (
+                  Partner?.map((agent) => (
                     <tr
                       key={agent.id}
                       className="hover:bg-muted/50 transition-colors"
@@ -133,7 +133,7 @@ export default function AgentsPage() {
                                 : 'default'
                             }
                             onClick={() =>
-                              toggleAgentStatus(
+                              togglePartnertatus(
                                 agent.id,
                                 agent.status || 'active'
                               )

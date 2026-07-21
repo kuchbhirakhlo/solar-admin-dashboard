@@ -46,31 +46,18 @@ export default function ServicesPage() {
         {services?.map((service) => (
           <Link key={service.id} href={`/dashboard/services/${service.id}`}>
             <div className="rounded-lg border border-border bg-card p-6 transition-all hover:shadow-lg hover:border-primary/50 cursor-pointer">
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-6">
-                {/* Service ID & Type */}
-                <div>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase">
-                    Service ID
-                  </p>
-                  <p className="mt-1 text-lg font-bold text-foreground">
-                    {service.id}
-                  </p>
-                  <p className="mt-2 inline-flex rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                    {service.type}
-                  </p>
-                </div>
-
-                {/* Customer */}
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-5">
+                {/* Customer Name & Type */}
                 <div>
                   <p className="text-xs font-semibold text-muted-foreground uppercase">
                     Customer
                   </p>
-                  <div className="mt-1 flex items-center gap-2">
-                    <div className="h-8 w-8 rounded-full bg-secondary/20" />
-                    <p className="font-medium text-foreground">
-                      {service.customerName}
-                    </p>
-                  </div>
+                  <p className="mt-1 text-lg font-bold text-foreground">
+                    {service.customerName}
+                  </p>
+                  <p className="mt-2 inline-flex rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                    {service.type}
+                  </p>
                 </div>
 
                 {/* Date */}

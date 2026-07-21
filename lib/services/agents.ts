@@ -25,7 +25,7 @@ export interface Agent {
  */
 export async function addAgent(agent: Omit<Agent, 'id'>) {
   try {
-    const docId = await addFirestoreDoc('agents', agent);
+    const docId = await addFirestoreDoc('Partner', agent);
     return docId;
   } catch (error) {
     throw new Error(`Failed to add agent: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -37,7 +37,7 @@ export async function addAgent(agent: Omit<Agent, 'id'>) {
  */
 export async function updateAgent(agentId: string, updates: Partial<Agent>) {
   try {
-    await updateFirestoreDoc('agents', agentId, updates);
+    await updateFirestoreDoc('Partner', agentId, updates);
   } catch (error) {
     throw new Error(`Failed to update agent: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
@@ -48,7 +48,7 @@ export async function updateAgent(agentId: string, updates: Partial<Agent>) {
  */
 export async function deleteAgent(agentId: string) {
   try {
-    await deleteFirestoreDoc('agents', agentId);
+    await deleteFirestoreDoc('Partner', agentId);
   } catch (error) {
     throw new Error(`Failed to delete agent: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
@@ -56,19 +56,19 @@ export async function deleteAgent(agentId: string) {
 
 /**
  * Get agent by ID (use hook in components)
- * Example: const { data: agent } = useFirestoreDoc<Agent>('agents', agentId);
+ * Example: const { data: agent } = useFirestoreDoc<Agent>('Partner', agentId);
  */
 
 /**
- * Get all agents (use hook in components)
- * Example: const { data: agents } = useFirestoreCollection<Agent>('agents');
+ * Get all Partner (use hook in components)
+ * Example: const { data: Partner } = useFirestoreCollection<Agent>('Partner');
  */
 
 /**
- * Get agents by region (use hook with constraints)
+ * Get Partner by region (use hook with constraints)
  * Example:
- * const { data: regionAgents } = useFirestoreCollection<Agent>(
- *   'agents',
+ * const { data: regionPartner } = useFirestoreCollection<Agent>(
+ *   'Partner',
  *   [where('region', '==', 'North America')]
  * );
  */

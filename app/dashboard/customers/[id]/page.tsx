@@ -2,12 +2,34 @@
 
 import { useEffect, useState, use } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/layout/page-header';
 import { StatusBadge } from '@/components/dashboard/status-badge';
-import { Mail, Phone, MapPin, Calendar, Zap, DollarSign, FileText } from 'lucide-react';
-import { Customer } from '@/lib/services/customers';
+import { Mail, Phone, MapPin, Calendar, Zap, FileText } from 'lucide-react';
+import { Customer, updateCustomer, deleteCustomer } from '@/lib/services/customers';
 import { useFirestoreDoc } from '@/lib/hooks/useFirestore';
 import { db } from '@/lib/firebase';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { useRouter } from 'next/navigation';
+
+function formatTimestamp(value: string | { seconds: number; nanoseconds: number } | undefined | null): string {
+  if (!value) return 'N/A';
+  if (typeof value === 'object' && 'seconds' in value) {
+    return new Date(value.seconds * 1000).toLocaleDateString();
+  }
+  if (typeof value === 'string' && value.length > 0) {
+    const date = new Date(value);
+    return isNaN(date.getTime()) ? value : date.toLocaleDateString();
+  }
+  return 'N/A';
+}
 
 export default function CustomerDetailPage({
   params,
@@ -15,7 +37,105 @@ export default function CustomerDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const router = useRouter();
   const { data: customerData, loading, error } = useFirestoreDoc<Customer>('customers', id);
+
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const [editForm, setEditForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    address: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    systemSize: '',
+    installationDate: '',
+    status: 'pending' as 'pending' | 'active' | 'inactive',
+    alternatePhone: '',
+    connectionNumber: '',
+    monthlyUsage: '',
+  });
+
+  // Populate edit form when customer data loads or dialog opens
+  useEffect(() => {
+    if (customerData && !Array.isArray(customerData) && editDialogOpen) {
+      setEditForm({
+        name: customerData.name || '',
+        email: customerData.email || '',
+        phone: customerData.phone || '',
+        address: customerData.address || '',
+        city: customerData.city || '',
+        state: customerData.state || '',
+        zipCode: customerData.zipCode || '',
+        systemSize: customerData.systemSize?.toString() || '',
+        installationDate: customerData.installationDate && typeof customerData.installationDate === 'object'
+          ? new Date((customerData.installationDate as unknown as { seconds: number }).seconds * 1000).toISOString().split('T')[0]
+          : typeof customerData.installationDate === 'string'
+            ? customerData.installationDate.split('T')[0] || customerData.installationDate
+            : '',
+        status: (customerData.status as 'pending' | 'active' | 'inactive') || 'pending',
+        alternatePhone: customerData.alternatePhone || '',
+        connectionNumber: customerData.connectionNumber || '',
+        monthlyUsage: customerData.monthlyUsage?.toString() || '',
+      });
+      setActionError(null);
+    }
+  }, [customerData, editDialogOpen]);
+
+  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    setEditForm({
+      ...editForm,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!customerData || Array.isArray(customerData)) return;
+    setSaving(true);
+    setActionError(null);
+
+    try {
+      await updateCustomer(id, {
+        name: editForm.name,
+        email: editForm.email,
+        phone: editForm.phone,
+        address: editForm.address,
+        city: editForm.city,
+        state: editForm.state,
+        zipCode: editForm.zipCode,
+        systemSize: parseFloat(editForm.systemSize) || 0,
+        installationDate: editForm.installationDate,
+        status: editForm.status,
+        alternatePhone: editForm.alternatePhone || undefined,
+        connectionNumber: editForm.connectionNumber || undefined,
+        monthlyUsage: parseFloat(editForm.monthlyUsage) || 0,
+      });
+      setEditDialogOpen(false);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Failed to update customer');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    setActionError(null);
+
+    try {
+      await deleteCustomer(id);
+      router.push('/dashboard/customers');
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Failed to delete customer');
+      setDeleting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -51,8 +171,14 @@ export default function CustomerDetailPage({
         ]}
         action={
           <div className="flex gap-2">
-            <Button variant="outline">Edit</Button>
-            <Button variant="outline" className="text-red-600 hover:bg-red-50">
+            <Button variant="outline" onClick={() => setEditDialogOpen(true)}>
+              Edit
+            </Button>
+            <Button
+              variant="outline"
+              className="text-red-600 hover:bg-red-50"
+              onClick={() => setDeleteDialogOpen(true)}
+            >
               Delete
             </Button>
           </div>
@@ -128,7 +254,7 @@ export default function CustomerDetailPage({
                   <p className="text-sm text-muted-foreground">Installation Date</p>
                   <p className="mt-1 flex items-center gap-2 font-medium text-foreground">
                     <Calendar size={18} className="text-primary" />
-                    {customer.installationDate}
+                    {formatTimestamp(customer.installationDate)}
                   </p>
                 </div>
                 <div>
@@ -145,7 +271,7 @@ export default function CustomerDetailPage({
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Customer Since</p>
-                  <p className="mt-1 font-medium text-foreground">{customer.createdAt ? new Date(customer.createdAt).toLocaleDateString() : 'N/A'}</p>
+                  <p className="mt-1 font-medium text-foreground">{formatTimestamp(customer.createdAt)}</p>
                 </div>
               </div>
             </div>
@@ -311,7 +437,7 @@ export default function CustomerDetailPage({
               <div>
                 <p className="text-sm text-muted-foreground">Total Spent</p>
                 <p className="mt-1 flex items-center gap-2 text-2xl font-bold text-foreground">
-                  <DollarSign size={24} className="text-green-600" />
+                  <span className="text-2xl font-bold text-green-600">₹</span>
                   {customer.totalSpent || 0}
                 </p>
               </div>
@@ -321,7 +447,7 @@ export default function CustomerDetailPage({
                   Average Monthly Cost
                 </p>
                 <p className="mt-1 text-lg font-semibold text-foreground">
-                  $185.50
+                  ₹185.50
                 </p>
               </div>
 
@@ -330,7 +456,7 @@ export default function CustomerDetailPage({
                   Energy Savings (Annual)
                 </p>
                 <p className="mt-1 text-lg font-semibold text-green-600">
-                  $2,450
+                  ₹2,450
                 </p>
               </div>
             </div>
@@ -356,6 +482,245 @@ export default function CustomerDetailPage({
           </div>
         </div>
       </div>
+
+      {/* Edit Customer Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Customer</DialogTitle>
+            <DialogDescription>
+              Update customer details below.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {actionError && (
+              <div className="rounded-md bg-red-50 p-4 text-sm text-red-800">
+                {actionError}
+              </div>
+            )}
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Full Name
+              </label>
+              <Input
+                name="name"
+                value={editForm.name}
+                onChange={handleEditChange}
+                required
+              />
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Mobile Number
+                </label>
+                <Input
+                  name="phone"
+                  type="tel"
+                  value={editForm.phone}
+                  onChange={handleEditChange}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Alternate Mobile Number
+                </label>
+                <Input
+                  name="alternatePhone"
+                  type="tel"
+                  value={editForm.alternatePhone}
+                  onChange={handleEditChange}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Email
+              </label>
+              <Input
+                name="email"
+                type="email"
+                value={editForm.email}
+                onChange={handleEditChange}
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Address
+              </label>
+              <Input
+                name="address"
+                value={editForm.address}
+                onChange={handleEditChange}
+                required
+              />
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-3">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  City
+                </label>
+                <Input
+                  name="city"
+                  value={editForm.city}
+                  onChange={handleEditChange}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  State
+                </label>
+                <Input
+                  name="state"
+                  value={editForm.state}
+                  onChange={handleEditChange}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  ZIP Code
+                </label>
+                <Input
+                  name="zipCode"
+                  value={editForm.zipCode}
+                  onChange={handleEditChange}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Connection Number
+                </label>
+                <Input
+                  name="connectionNumber"
+                  value={editForm.connectionNumber}
+                  onChange={handleEditChange}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Plant Size (KW)
+                </label>
+                <Input
+                  name="systemSize"
+                  type="number"
+                  step="0.1"
+                  value={editForm.systemSize}
+                  onChange={handleEditChange}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Installation Date
+                </label>
+                <Input
+                  name="installationDate"
+                  type="date"
+                  value={editForm.installationDate}
+                  onChange={handleEditChange}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Monthly Usage (kWh)
+                </label>
+                <Input
+                  name="monthlyUsage"
+                  type="number"
+                  value={editForm.monthlyUsage}
+                  onChange={handleEditChange}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Status
+              </label>
+              <select
+                name="status"
+                value={editForm.status}
+                onChange={handleEditChange}
+                className="w-full rounded-lg border border-border bg-card px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="pending">Pending</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setEditDialogOpen(false)}
+              disabled={saving}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+              onClick={handleSaveEdit}
+              disabled={saving}
+            >
+              {saving ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Customer</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete <strong>{customer.name}</strong>? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          {actionError && (
+            <div className="rounded-md bg-red-50 p-4 text-sm text-red-800">
+              {actionError}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={deleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-red-600 text-white hover:bg-red-700"
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              {deleting ? 'Deleting...' : 'Delete Customer'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

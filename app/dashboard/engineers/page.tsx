@@ -1,11 +1,47 @@
+'use client';
+
+import { useFirestoreCollectionRealtime } from '@/lib/hooks/useFirestore';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/layout/page-header';
 import { StatusBadge } from '@/components/dashboard/status-badge';
-import { Plus, ChevronRight, Award, CheckCircle } from 'lucide-react';
-import { MOCK_ENGINEERS } from '@/lib/constants';
+import { Search, Plus, ChevronRight, Award } from 'lucide-react';
+import { Engineer } from '@/lib/services/engineers';
 import Link from 'next/link';
+import { useState, useMemo } from 'react';
 
 export default function EngineersPage() {
+  const { data: engineers, loading, error } = useFirestoreCollectionRealtime<Engineer>('engineers');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredEngineers = useMemo(() => {
+    if (!engineers) return [];
+    if (!searchQuery.trim()) return engineers;
+    const query = searchQuery.toLowerCase();
+    return engineers.filter(
+      (eng) =>
+        eng.name?.toLowerCase().includes(query) ||
+        eng.email?.toLowerCase().includes(query) ||
+        eng.phone?.toLowerCase().includes(query)
+    );
+  }, [engineers, searchQuery]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <p className="text-muted-foreground">Loading engineers...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <p className="text-red-500">Failed to load engineers: {error}</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -22,67 +58,113 @@ export default function EngineersPage() {
         }
       />
 
-      {/* Engineers Grid */}
-      <div className="px-6 py-6">
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {MOCK_ENGINEERS.map((engineer) => (
-            <Link key={engineer.id} href={`/dashboard/engineers/${engineer.id}`}>
-              <div className="group rounded-lg border border-border bg-card p-6 transition-all hover:shadow-lg hover:border-primary/50 cursor-pointer">
-                {/* Header */}
-                <div className="mb-4 flex items-start justify-between">
-                  <div>
-                    <h3 className="text-lg font-semibold text-foreground">
-                      {engineer.name}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      {engineer.email}
-                    </p>
-                  </div>
-                  <StatusBadge status={engineer.status as any} />
-                </div>
+      {/* Search & Filters */}
+      <div className="px-6 py-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
+          <div className="relative flex-1">
+            <Search
+              size={18}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+            />
+            <Input
+              placeholder="Search by name, email or phone..."
+              className="pl-10"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <Button variant="outline">Filter</Button>
+        </div>
+      </div>
 
-                {/* Certification */}
-                <div className="mb-4 flex items-center gap-2 rounded-lg bg-primary/10 px-3 py-2">
-                  <Award size={16} className="text-primary" />
-                  <span className="text-sm font-medium text-primary">
-                    {engineer.certification}
-                  </span>
-                </div>
-
-                {/* Stats */}
-                <div className="border-t border-border pt-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs text-muted-foreground">
-                        Completed Projects
-                      </p>
-                      <p className="text-2xl font-bold text-foreground">
-                        {engineer.completedProjects}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-muted-foreground">Active</p>
-                      <div className="flex items-center gap-1">
-                        <CheckCircle size={20} className="text-green-500" />
-                        <p className="text-2xl font-bold text-foreground">
-                          {engineer.activeProjects}
-                        </p>
+      {/* Engineers Table */}
+      <div className="px-6">
+        <div className="overflow-x-auto rounded-lg border border-border">
+          <table className="w-full">
+            <thead className="border-b border-border bg-muted/50">
+              <tr>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">
+                  Name
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">
+                  Email
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">
+                  Phone
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">
+                  Certification
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-center text-sm font-semibold text-foreground">
+                  Action
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {filteredEngineers.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
+                    {searchQuery ? 'No engineers match your search.' : 'No engineers found. Add your first engineer to get started.'}
+                  </td>
+                </tr>
+              ) : (
+                filteredEngineers.map((engineer) => (
+                  <tr
+                    key={engineer.id}
+                    className="hover:bg-muted/50 transition-colors"
+                  >
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold text-primary">
+                          {engineer.name?.charAt(0)?.toUpperCase() || 'E'}
+                        </div>
+                        <p className="font-medium text-foreground">{engineer.name}</p>
                       </div>
-                    </div>
-                  </div>
-                </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-muted-foreground">
+                      {engineer.email}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-muted-foreground">
+                      {engineer.phone}
+                    </td>
+                    <td className="px-6 py-4">
+                      {engineer.certification ? (
+                        <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                          <Award size={14} />
+                          {engineer.certification}
+                        </div>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">—</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <StatusBadge status={(engineer.status || 'active') as any} />
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <Link href={`/dashboard/engineers/${engineer.id}`}>
+                        <button className="inline-flex items-center justify-center rounded-lg p-2 hover:bg-muted">
+                          <ChevronRight
+                            size={20}
+                            className="text-muted-foreground"
+                          />
+                        </button>
+                      </Link>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
 
-                {/* Action */}
-                <Button
-                  variant="ghost"
-                  className="mt-4 w-full"
-                >
-                  View Details
-                  <ChevronRight size={16} className="ml-2" />
-                </Button>
-              </div>
-            </Link>
-          ))}
+        {/* Footer */}
+        <div className="mt-4 flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Showing {filteredEngineers.length} engineer{filteredEngineers.length !== 1 ? 's' : ''}
+          </p>
         </div>
       </div>
     </div>

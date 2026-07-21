@@ -99,7 +99,7 @@ Functions:
 - Types: `Customer` interface
 **Use this:** All customer-related operations
 
-#### `lib/services/agents.ts`
+#### `lib/services/Partner.ts`
 Agent management operations.
 Functions:
 - `addAgent(agentData)` - Add new agent
@@ -197,7 +197,7 @@ lib/
 └── services/
     ├── customers.ts
     │   └── imports: useFirestore functions
-    └── agents.ts
+    └── Partner.ts
         └── imports: useFirestore functions
 ```
 
@@ -260,7 +260,7 @@ Before deploying to production:
 
 ### Phase 2: Collections (TO DO)
 - [ ] Create customers collection
-- [ ] Create agents collection
+- [ ] Create Partner collection
 - [ ] Create services collection
 - [ ] Create installations collection
 - [ ] Create payments collection
@@ -270,7 +270,7 @@ Before deploying to production:
 
 ### Phase 3: Pages Integration (TO DO)
 - [ ] Update customer list to fetch from Firestore
-- [ ] Update agents list to fetch from Firestore
+- [ ] Update Partner list to fetch from Firestore
 - [ ] Add create customer form
 - [ ] Add create agent form
 - [ ] Implement search/filter

@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
 
 interface NavItem {
   name: string;
@@ -28,7 +29,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard size={20} /> },
   { name: 'Customers', href: '/dashboard/customers', icon: <Users size={20} /> },
-  { name: 'Agents', href: '/dashboard/agents', icon: <UserCheck size={20} /> },
+  { name: 'Partner', href: '/dashboard/agents', icon: <UserCheck size={20} /> },
   {
     name: 'Engineers',
     href: '/dashboard/engineers',
@@ -91,15 +92,12 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
         {/* Header */}
         <div className="flex items-center justify-between border-b border-sidebar-border px-4 py-6">
           <div className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sidebar-primary">
-              <Sun size={24} className="text-sidebar-primary-foreground" />
-            </div>
+             <div className="flex h-20 w-20 items-center justify-center rounded-lg ">
+               <Image src="/logo.png" alt="Logo" width={100} height={30} />
+             </div>
             {!collapsed && (
               <div className="flex flex-col">
-                <span className="text-sm font-bold text-sidebar-foreground">
-                  SolarXpert
-                </span>
-                <span className="text-xs text-sidebar-foreground/60">Admin</span>
+                <span className="text-xs text-blue">Admin</span>
               </div>
             )}
           </div>

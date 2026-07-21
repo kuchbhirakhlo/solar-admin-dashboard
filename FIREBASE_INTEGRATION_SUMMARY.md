@@ -29,7 +29,7 @@ Your Solar Energy Admin Dashboard has been fully integrated with Firebase. Here'
 
 ### Services/Business Logic
 - **`lib/services/customers.ts`** - Customer management functions
-- **`lib/services/agents.ts`** - Agent management functions
+- **`lib/services/Partner.ts`** - Agent management functions
 
 ### Documentation
 - **`FIREBASE_SETUP.md`** - Complete setup instructions
@@ -116,7 +116,7 @@ NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_domain
 # Go to Firebase Console > Firestore Database
 # Create collections:
 # - customers
-# - agents
+# - Partner
 # - services
 # - installations
 # - payments
@@ -201,7 +201,7 @@ See `FIREBASE_SETUP.md` for example security rules
 }
 ```
 
-### Agents
+### Partner
 ```typescript
 {
   id: string;

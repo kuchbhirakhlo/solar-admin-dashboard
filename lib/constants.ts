@@ -67,7 +67,7 @@ export const MOCK_CUSTOMERS = [
   },
 ];
 
-export const MOCK_AGENTS = [
+export const MOCK_Partner = [
   {
     id: '1',
     name: 'Vikram Joshi',
@@ -190,7 +190,7 @@ export const MOCK_NOTIFICATIONS = [
 export const DASHBOARD_MENU = [
   { label: 'Dashboard', value: 'dashboard' },
   { label: 'Customers', value: 'customers' },
-  { label: 'Agents', value: 'agents' },
+  { label: 'Partner', value: 'Partner' },
   { label: 'Engineers', value: 'engineers' },
   { label: 'Subscriptions', value: 'subscriptions' },
   { label: 'Services', value: 'services' },

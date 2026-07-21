@@ -66,13 +66,14 @@ export default function EngineerLoginPage() {
         <div className="w-full max-w-sm">
           {/* Logo */}
           <div className="mb-8 flex items-center gap-3">
-            <div className="flex h-50 w-50 items-center justify-center rounded-lg">
+            <div className="flex h-auto w-auto items-center justify-center rounded-lg">
               <Image
                 src="/logo.png"
                 alt="SolarXpert Logo"
                 width={50}
                 height={50}
                 className="object-contain rounded-3xl w-full h-full"
+                loading="eager"
               />
             </div>
           </div>
@@ -149,6 +150,7 @@ export default function EngineerLoginPage() {
               width={80}
               height={100}
               className="object-contain rounded-full w-full h-full"
+              loading="eager"
             />
           </div>
           <h2 className="mb-4 text-3xl font-bold text-foreground">

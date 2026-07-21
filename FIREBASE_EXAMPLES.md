@@ -606,8 +606,8 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
     }
 
-    // Allow authenticated users to read agents
-    match /agents/{agentId} {
+    // Allow authenticated users to read Partner
+    match /Partner/{agentId} {
       allow read: if request.auth != null;
       allow write: if request.auth != null && hasRole('admin');
     }
