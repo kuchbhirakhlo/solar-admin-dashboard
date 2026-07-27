@@ -24,6 +24,7 @@ export interface Customer {
   updatedAt?: string;
   alternatePhone?: string;
   connectionNumber?: string;
+  projectStatus?: 'registration' | 'upload_agreement' | 'installation' | 'project_commissioning' | 'discom_approval';
   documents?: {
     aadhaarFront?: string;
     aadhaarBack?: string;

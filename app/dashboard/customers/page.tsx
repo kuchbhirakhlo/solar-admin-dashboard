@@ -81,7 +81,10 @@ export default function CustomersPage() {
                   System Size
                 </th>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">
-                  Status
+                  Account Status
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">
+                  Project Status
                 </th>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">
                   Total Spent
@@ -111,6 +114,11 @@ export default function CustomersPage() {
                   </td>
                   <td className="px-6 py-4">
                     <StatusBadge status={customer.status as any} />
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="text-sm text-foreground">
+                      {customer.projectStatus ? customer.projectStatus.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Registration'}
+                    </span>
                   </td>
                   <td className="px-6 py-4 font-semibold text-foreground">
                     {customer.totalSpent}

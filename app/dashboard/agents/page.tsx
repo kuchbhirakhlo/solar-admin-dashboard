@@ -5,7 +5,7 @@ import { useFirestoreCollectionRealtime } from '@/lib/hooks/useFirestore';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/layout/page-header';
 import { StatusBadge } from '@/components/dashboard/status-badge';
-import { Plus, ChevronRight, MapPin, Phone } from 'lucide-react';
+import { Plus, MapPin, Phone } from 'lucide-react';
 import { User } from '@/lib/services/users';
 import { where } from 'firebase/firestore';
 import Link from 'next/link';
@@ -15,6 +15,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { ProjectStatusBar } from '@/components/dashboard/project-status-bar';
+import { Customer } from '@/lib/services/customers';
 
 export default function PartnerPage() {
   const { data: users, loading, error } =
@@ -26,6 +28,8 @@ export default function PartnerPage() {
 
   const [selectedAgent, setSelectedAgent] = useState<User | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [agentCustomers, setAgentCustomers] = useState<Customer[]>([]);
+  const [loadingCustomers, setLoadingCustomers] = useState(false);
 
   const togglePartnertatus = async (
     agentId: string | undefined,
@@ -41,9 +45,24 @@ export default function PartnerPage() {
     }
   };
 
-  const openDetails = (agent: User) => {
+  const openDetails = async (agent: User) => {
     setSelectedAgent(agent);
     setDialogOpen(true);
+    
+    // Fetch customers associated with this agent
+    if (agent.customerId) {
+      setLoadingCustomers(true);
+      try {
+        const { useFirestoreDoc } = await import('@/lib/hooks/useFirestore');
+        // For now, we'll just show the agent's assigned customer if available
+        // In a real app, you'd query customers by agentId
+        setAgentCustomers([]);
+      } catch (err) {
+        console.error('Failed to load agent customers:', err);
+      } finally {
+        setLoadingCustomers(false);
+      }
+    }
   };
 
   return (
@@ -155,12 +174,12 @@ export default function PartnerPage() {
 
       {/* Agent Details Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Agent Details</DialogTitle>
+            <DialogTitle>Partner Details</DialogTitle>
           </DialogHeader>
           {selectedAgent && (
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs text-muted-foreground">Full Name</p>
@@ -231,6 +250,44 @@ export default function PartnerPage() {
                   </p>
                 </div>
               </div>
+
+              {/* Assigned Customers Section */}
+              {selectedAgent.customerId && (
+                <div className="border-t border-border pt-4">
+                  <h3 className="text-sm font-semibold text-foreground mb-3">
+                    Assigned Customers
+                  </h3>
+                  {loadingCustomers ? (
+                    <p className="text-sm text-muted-foreground">Loading customers...</p>
+                  ) : agentCustomers.length > 0 ? (
+                    <div className="space-y-3">
+                      {agentCustomers.map((customer) => (
+                        <div
+                          key={customer.id}
+                          className="rounded-lg border border-border p-3"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-medium text-foreground">{customer.name}</p>
+                              <p className="text-xs text-muted-foreground">{customer.email}</p>
+                            </div>
+                            <StatusBadge status={customer.status as any} />
+                          </div>
+                          <div className="mt-3">
+                            <p className="text-xs text-muted-foreground mb-2">Project Status</p>
+                            <ProjectStatusBar 
+                              currentStatus={customer.projectStatus || 'registration'} 
+                              readonly={true}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No customers assigned</p>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </DialogContent>

@@ -73,6 +73,14 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // --- Subscription Plans ---
+    match /subscriptionPlans/{planId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
     // --- Notifications ---
     match /notifications/{notificationId} {
       allow read: if isAuthenticated();

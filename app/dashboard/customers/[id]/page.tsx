@@ -9,6 +9,7 @@ import { Mail, Phone, MapPin, Calendar, Zap, FileText } from 'lucide-react';
 import { Customer, updateCustomer, deleteCustomer } from '@/lib/services/customers';
 import { useFirestoreDoc } from '@/lib/hooks/useFirestore';
 import { db } from '@/lib/firebase';
+import { ProjectStatusBar, ProjectStatus } from '@/components/dashboard/project-status-bar';
 import {
   Dialog,
   DialogContent,
@@ -57,6 +58,7 @@ export default function CustomerDetailPage({
     systemSize: '',
     installationDate: '',
     status: 'pending' as 'pending' | 'active' | 'inactive',
+    projectStatus: 'registration' as ProjectStatus,
     alternatePhone: '',
     connectionNumber: '',
     monthlyUsage: '',
@@ -80,6 +82,7 @@ export default function CustomerDetailPage({
             ? customerData.installationDate.split('T')[0] || customerData.installationDate
             : '',
         status: (customerData.status as 'pending' | 'active' | 'inactive') || 'pending',
+        projectStatus: customerData.projectStatus || 'registration',
         alternatePhone: customerData.alternatePhone || '',
         connectionNumber: customerData.connectionNumber || '',
         monthlyUsage: customerData.monthlyUsage?.toString() || '',
@@ -112,6 +115,7 @@ export default function CustomerDetailPage({
         systemSize: parseFloat(editForm.systemSize) || 0,
         installationDate: editForm.installationDate,
         status: editForm.status,
+        projectStatus: editForm.projectStatus,
         alternatePhone: editForm.alternatePhone || undefined,
         connectionNumber: editForm.connectionNumber || undefined,
         monthlyUsage: parseFloat(editForm.monthlyUsage) || 0,
@@ -275,6 +279,17 @@ export default function CustomerDetailPage({
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Project Status */}
+          <div className="rounded-lg border border-border bg-card p-6">
+            <h2 className="mb-6 text-lg font-semibold text-foreground">
+              Project Status
+            </h2>
+            <ProjectStatusBar 
+              currentStatus={customer.projectStatus || 'registration'} 
+              readonly={true}
+            />
           </div>
 
           {/* Documents */}
@@ -653,7 +668,7 @@ export default function CustomerDetailPage({
 
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
-                Status
+                Account Status
               </label>
               <select
                 name="status"
@@ -664,6 +679,24 @@ export default function CustomerDetailPage({
                 <option value="pending">Pending</option>
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Project Status
+              </label>
+              <select
+                name="projectStatus"
+                value={editForm.projectStatus}
+                onChange={handleEditChange}
+                className="w-full rounded-lg border border-border bg-card px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="registration">Registration</option>
+                <option value="upload_agreement">Upload Agreement</option>
+                <option value="installation">Installation</option>
+                <option value="project_commissioning">Project Commissioning</option>
+                <option value="discom_approval">Discom Approval</option>
               </select>
             </div>
           </div>
