@@ -64,7 +64,7 @@ export default function RegistrarLoginPage() {
         <div className="w-full max-w-sm">
           {/* Logo */}
           <div className="mb-8 flex items-center gap-3">
-            <div className="flex h-auto w-auto items-center justify-center rounded-lg">
+            <div className="flex h-20 w-20 items-center bg-gray-700 justify-center rounded-lg ">
               <Image
                 src="/logo.png"
                 alt="SolarXpert Logo"
@@ -137,7 +137,7 @@ export default function RegistrarLoginPage() {
       {/* Right Side - Branding */}
       <div className="hidden bg-gradient-to-br from-primary/10 via-secondary/5 to-background lg:flex flex-col items-center justify-center p-12">
         <div className="max-w-md text-center">
-          <div className="mb-8 flex h-48 w-48 items-center justify-center rounded-full bg-primary/20 mx-auto">
+          <div className="mb-8 flex h-48 w-48 items-center justify-center rounded-full bg-gray-700 mx-auto">
             <Image
               src="/logo.png"
               alt="SolarXpert Logo"
