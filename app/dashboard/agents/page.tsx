@@ -18,30 +18,30 @@ import {
 import { ProjectStatusBar } from '@/components/dashboard/project-status-bar';
 import { Customer } from '@/lib/services/customers';
 
-export default function PartnerPage() {
+export default function EmployeePage() {
   const { data: users, loading, error } =
     useFirestoreCollectionRealtime<User>('users', [
-      where('role', '==', 'agent'),
+      where('role', 'in', ['agent', 'engineer', 'registrar', 'partner']),
     ]);
 
-  const Partner = users;
+  const Employee = users;
 
   const [selectedAgent, setSelectedAgent] = useState<User | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [agentCustomers, setAgentCustomers] = useState<Customer[]>([]);
   const [loadingCustomers, setLoadingCustomers] = useState(false);
 
-  const togglePartnertatus = async (
-    agentId: string | undefined,
+  const toggleEmployeeStatus = async (
+    employeeId: string | undefined,
     currentStatus: string
   ) => {
-    if (!agentId) return;
+    if (!employeeId) return;
     const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
     try {
       const { updateFirestoreDoc } = await import('@/lib/hooks/useFirestore');
-      await updateFirestoreDoc('users', agentId, { status: newStatus });
+      await updateFirestoreDoc('users', employeeId, { status: newStatus });
     } catch (err) {
-      console.error('Failed to update agent status:', err);
+      console.error('Failed to update employee status:', err);
     }
   };
 
@@ -69,22 +69,22 @@ export default function PartnerPage() {
     <div className="space-y-6">
       {/* Page Header */}
       <PageHeader
-        title="Sales Partner"
-        description="Manage your sales team and track their performance"
+        title="Employees"
+        description="Manage your employees - engineers, registrars, and partners"
         action={
-          <Link href="/dashboard/Partner/new">
+          <Link href="/dashboard/agents/new">
             <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
               <Plus size={20} className="mr-2" />
-              Add Agent
+              Add Employee
             </Button>
           </Link>
         }
       />
 
-      {/* Partner Table */}
+      {/* Employee Table */}
       <div className="px-6 py-6">
         {error && (
-          <p className="text-sm text-red-500 mb-4">Failed to load Partner: {error}</p>
+          <p className="text-sm text-red-500 mb-4">Failed to load employees: {error}</p>
         )}
 
         <div className="rounded-lg border border-border bg-card overflow-hidden">
@@ -95,7 +95,7 @@ export default function PartnerPage() {
                   <th className="px-6 py-3 font-medium">Name</th>
                   <th className="px-6 py-3 font-medium">Email</th>
                   <th className="px-6 py-3 font-medium">Phone</th>
-                  <th className="px-6 py-3 font-medium">Location</th>
+                  <th className="px-6 py-3 font-medium">Role</th>
                   <th className="px-6 py-3 font-medium">Status</th>
                   <th className="px-6 py-3 font-medium text-right">Actions</th>
                 </tr>
@@ -104,61 +104,60 @@ export default function PartnerPage() {
                 {loading && (
                   <tr>
                     <td
-                      colSpan={6}
+                      colSpan={7}
                       className="px-6 py-4 text-center text-muted-foreground"
                     >
-                      Loading Partner...
+                      Loading employees...
                     </td>
                   </tr>
                 )}
                 {!loading &&
-                  Partner?.map((agent) => (
+                  Employee?.map((employee) => (
                     <tr
-                      key={agent.id}
+                      key={employee.id}
                       className="hover:bg-muted/50 transition-colors"
                     >
                       <td className="px-6 py-4 font-medium text-foreground">
-                        {agent.name}
+                        {employee.name}
                       </td>
                       <td className="px-6 py-4 text-muted-foreground">
-                        {agent.email}
+                        {employee.email}
                       </td>
                       <td className="px-6 py-4 text-muted-foreground">
-                        {agent.phone}
+                        {employee.phone}
                       </td>
-                      <td className="px-6 py-4 text-muted-foreground">
-                        <span className="inline-flex items-center gap-1">
-                          <MapPin size={14} />
-                          {agent.city}, {agent.state}
+                      <td className="px-6 py-4">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                          {employee.role === 'agent' ? 'Partner' : employee.role === 'registrar' ? 'Registrar' : employee.role === 'engineer' ? 'Engineer' : employee.role === 'partner' ? 'Partner' : employee.role}
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <StatusBadge status={(agent.status as any) || 'active'} />
+                        <StatusBadge status={(employee.status as any) || 'active'} />
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-end gap-2">
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => openDetails(agent)}
+                            onClick={() => openDetails(employee)}
                           >
                             View Details
                           </Button>
                           <Button
                             size="sm"
                             variant={
-                              agent.status === 'active'
+                              employee.status === 'active'
                                 ? 'destructive'
                                 : 'default'
                             }
                             onClick={() =>
-                              togglePartnertatus(
-                                agent.id,
-                                agent.status || 'active'
+                              toggleEmployeeStatus(
+                                employee.id,
+                                employee.status || 'active'
                               )
                             }
                           >
-                            {agent.status === 'active'
+                            {employee.status === 'active'
                               ? 'Deactivate'
                               : 'Activate'}
                           </Button>
@@ -176,7 +175,7 @@ export default function PartnerPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Partner Details</DialogTitle>
+            <DialogTitle>Employee Details</DialogTitle>
           </DialogHeader>
           {selectedAgent && (
             <div className="space-y-6">

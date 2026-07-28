@@ -34,10 +34,12 @@ export default function ServicesPage() {
         title="Service Requests"
         description="Track and manage all service requests"
         action={
-          <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
-            <Plus size={20} className="mr-2" />
-            New Service Request
-          </Button>
+          <Link href="/dashboard/services/new">
+            <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
+              <Plus size={20} className="mr-2" />
+              New Service Request
+            </Button>
+          </Link>
         }
       />
 

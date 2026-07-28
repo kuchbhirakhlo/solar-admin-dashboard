@@ -132,11 +132,7 @@ export default function EngineerLoginPage() {
           </form>
 
           {/* Footer */}
-          <p className="mt-8 text-center text-sm text-muted-foreground">
-            <Link href="/auth/login" className="font-medium text-primary hover:underline">
-              Admin Login
-            </Link>
-          </p>
+
         </div>
       </div>
 

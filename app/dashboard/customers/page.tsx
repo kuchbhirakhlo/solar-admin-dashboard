@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/layout/page-header';
 import { StatusBadge } from '@/components/dashboard/status-badge';
-import { Search, Plus, ChevronRight } from 'lucide-react';
+import { Search, ChevronRight } from 'lucide-react';
 import { Customer } from '@/lib/services/customers';
 import Link from 'next/link';
 
@@ -34,14 +34,6 @@ export default function CustomersPage() {
       <PageHeader
         title="Customers"
         description="Manage and view all customer accounts"
-        action={
-          <Link href="/dashboard/customers/new">
-            <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
-              <Plus size={20} className="mr-2" />
-              Add Customer
-            </Button>
-          </Link>
-        }
       />
 
       {/* Search & Filters */}
@@ -75,9 +67,6 @@ export default function CustomersPage() {
                   Email
                 </th>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">
-                  Location
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">
                   System Size
                 </th>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">
@@ -105,9 +94,6 @@ export default function CustomersPage() {
                   </td>
                   <td className="px-6 py-4 text-sm text-muted-foreground">
                     {customer.email}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-muted-foreground">
-                    {customer.location}
                   </td>
                   <td className="px-6 py-4 text-sm font-medium text-foreground">
                     {customer.systemSize}

@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 type Status =
   | 'active'
   | 'pending'
+  | 'in-progress'
   | 'completed'
   | 'cancelled'
   | 'failed'
@@ -21,6 +22,11 @@ const statusStyles: Record<
     bg: 'bg-yellow-100',
     text: 'text-yellow-700',
     dot: 'bg-yellow-500',
+  },
+  'in-progress': {
+    bg: 'bg-blue-100',
+    text: 'text-blue-700',
+    dot: 'bg-blue-500',
   },
   completed: {
     bg: 'bg-blue-100',
@@ -47,6 +53,7 @@ const statusStyles: Record<
 const statusLabels: Record<Status, string> = {
   active: 'Active',
   pending: 'Pending',
+  'in-progress': 'In Progress',
   completed: 'Completed',
   cancelled: 'Cancelled',
   failed: 'Failed',

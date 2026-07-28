@@ -2,20 +2,19 @@
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Sun } from 'lucide-react';
-import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { loginWithEmail } from '@/lib/auth';
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase';
 import Image from 'next/image';
 
-export default function LoginPage() {
+export default function RegistrarLoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('admin@solar.com');
-  const [password, setPassword] = useState('password123');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [rememberMe, setRememberMe] = useState(true);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,10 +22,33 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      await loginWithEmail(email, password);
-      // Store session data in sessionStorage
-      sessionStorage.setItem('isAuthenticated', 'true');
-      sessionStorage.setItem('loginTimestamp', Date.now().toString());
+      // Find registrar by phone number in Firestore
+      const { collection, query, where, getDocs } = await import('firebase/firestore');
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where('phone', '==', phone), where('role', '==', 'registrar'));
+      const snapshot = await getDocs(q);
+
+      if (snapshot.empty) {
+        throw new Error('No registrar account found with this phone number');
+      }
+
+      const userDoc = snapshot.docs[0];
+      const userData = userDoc.data();
+      const email = userData.email;
+
+      if (!email) {
+        throw new Error('Registrar account has no email associated');
+      }
+
+      // Sign in with email and password
+      const result = await signInWithEmailAndPassword(auth, email, password);
+
+      // Store session
+      sessionStorage.setItem('registrarAuthenticated', 'true');
+      sessionStorage.setItem('registrarUid', result.user.uid);
+      sessionStorage.setItem('registrarName', userData.name || '');
+      sessionStorage.setItem('registrarPhone', phone);
+
       router.push('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
@@ -34,6 +56,7 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
   return (
     <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
       {/* Left Side - Form */}
@@ -41,21 +64,22 @@ export default function LoginPage() {
         <div className="w-full max-w-sm">
           {/* Logo */}
           <div className="mb-8 flex items-center gap-3">
-            <div className="flex h-50 w-50 items-center justify-center rounded-lg ">
-              <Image 
-            src="/logo.png" 
-            alt="SolarXpert Logo"
-            width={50}
-            height={50}
-            className="object-contain rounded-3xl w-full h-full"
-          />
+            <div className="flex h-auto w-auto items-center justify-center rounded-lg">
+              <Image
+                src="/logo.png"
+                alt="SolarXpert Logo"
+                width={50}
+                height={50}
+                className="object-contain rounded-3xl w-full h-full"
+                loading="eager"
+              />
             </div>
           </div>
 
           {/* Heading */}
-          <h2 className="mb-2 text-3xl font-bold text-foreground">Welcome back</h2>
+          <h2 className="mb-2 text-3xl font-bold text-foreground">Registrar Portal</h2>
           <p className="mb-8 text-muted-foreground">
-            Sign in to your admin dashboard
+            Sign in with your registered mobile number
           </p>
 
           {/* Form */}
@@ -65,16 +89,16 @@ export default function LoginPage() {
                 {error}
               </div>
             )}
-            
+
             <div>
               <label className="mb-2 block text-sm font-medium text-foreground">
-                Email
+                Mobile Number
               </label>
               <Input
-                type="email"
-                placeholder="admin@solar.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="tel"
+                placeholder="+91 98765 43210"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
                 disabled={loading}
                 required
                 className="w-full"
@@ -96,22 +120,7 @@ export default function LoginPage() {
               />
             </div>
 
-            <div className="flex items-center">
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  disabled={loading}
-                  className="h-4 w-4 rounded border-input bg-card"
-                />
-                <span className="text-sm text-muted-foreground">
-                  Remember me
-                </span>
-              </label>
-            </div>
-
-            <Button 
+            <Button
               type="submit"
               disabled={loading}
               className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
@@ -120,7 +129,8 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          {/* Footer - removed */}
+          {/* Footer */}
+
         </div>
       </div>
 
@@ -128,27 +138,27 @@ export default function LoginPage() {
       <div className="hidden bg-gradient-to-br from-primary/10 via-secondary/5 to-background lg:flex flex-col items-center justify-center p-12">
         <div className="max-w-md text-center">
           <div className="mb-8 flex h-48 w-48 items-center justify-center rounded-full bg-primary/20 mx-auto">
-         <Image 
-            src="/logo.png" 
-            alt="SolarXpert Logo"
-            width={80}
-            height={100}
-            className="object-contain rounded-full w-full h-full"
-          />
-
+            <Image
+              src="/logo.png"
+              alt="SolarXpert Logo"
+              width={80}
+              height={100}
+              className="object-contain rounded-full w-full h-full"
+              loading="eager"
+            />
           </div>
           <h2 className="mb-4 text-3xl font-bold text-foreground">
-            Solar Energy Management
+            Registrar Workspace
           </h2>
           <p className="mb-8 text-lg text-muted-foreground">
-            Manage your solar business operations with our comprehensive admin dashboard
+            Manage customer registrations and new connections
           </p>
           <ul className="space-y-4 text-left">
             {[
-              'Manage customers and subscriptions',
-              'Track installation progress',
-              'Monitor service requests',
-              'Generate detailed reports',
+              'Register new customers',
+              'Manage subscription plans',
+              'Track installation requests',
+              'Handle customer inquiries',
             ].map((item, i) => (
               <li key={i} className="flex items-start gap-3">
                 <span className="mt-1 h-2 w-2 rounded-full bg-primary flex-shrink-0" />

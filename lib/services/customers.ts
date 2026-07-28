@@ -4,6 +4,8 @@ import {
   deleteFirestoreDoc,
 } from '@/lib/hooks/useFirestore';
 import { addUser } from './users';
+import { db } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 export interface Customer {
   id?: string;
@@ -34,6 +36,27 @@ export interface Customer {
     gpsPhoto?: string;
     ownershipDocument?: string;
   };
+}
+
+/**
+ * Get customer status by customer ID from Firestore
+ * Fetches only the status field for efficiency
+ */
+export async function getCustomerStatus(customerId: string): Promise<'active' | 'pending' | 'inactive' | null> {
+  try {
+    const docRef = doc(db, 'customers', customerId);
+    const docSnap = await getDoc(docRef);
+    
+    if (!docSnap.exists()) {
+      return null;
+    }
+
+    const data = docSnap.data();
+    return (data.status as 'active' | 'pending' | 'inactive') || null;
+  } catch (error) {
+    console.error('Failed to get customer status:', error);
+    throw new Error(`Failed to get customer status: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 }
 
 /**

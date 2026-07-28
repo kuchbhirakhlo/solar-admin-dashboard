@@ -189,6 +189,17 @@ export default function CustomerDetailPage({
         }
       />
 
+          {/* Project Status */}
+          <div className="rounded-lg border border-border bg-card p-6">
+            <h2 className="mb-6 text-lg font-semibold text-foreground">
+              Project Status
+            </h2>
+            <ProjectStatusBar 
+              currentStatus={customer.projectStatus || 'registration'} 
+              readonly={true}
+            />
+          </div>
+
       {/* Main Content */}
       <div className="px-6 py-6 grid gap-6 lg:grid-cols-3">
         {/* Left Column - Details */}
@@ -281,16 +292,6 @@ export default function CustomerDetailPage({
             </div>
           </div>
 
-          {/* Project Status */}
-          <div className="rounded-lg border border-border bg-card p-6">
-            <h2 className="mb-6 text-lg font-semibold text-foreground">
-              Project Status
-            </h2>
-            <ProjectStatusBar 
-              currentStatus={customer.projectStatus || 'registration'} 
-              readonly={true}
-            />
-          </div>
 
           {/* Documents */}
           {customer.documents && (

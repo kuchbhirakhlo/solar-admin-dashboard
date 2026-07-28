@@ -6,13 +6,8 @@ import {
   LayoutDashboard,
   Users,
   UserCheck,
-  Wrench,
   Zap,
   Briefcase,
-  BarChart3,
-  Settings,
-  Sun,
-  Menu,
   X,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -29,12 +24,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard size={20} /> },
   { name: 'Customers', href: '/dashboard/customers', icon: <Users size={20} /> },
-  { name: 'Partner', href: '/dashboard/agents', icon: <UserCheck size={20} /> },
-  {
-    name: 'Engineers',
-    href: '/dashboard/engineers',
-    icon: <Wrench size={20} />,
-  },
+  { name: 'Employee', href: '/dashboard/agents', icon: <UserCheck size={20} /> },
   {
     name: 'Subscriptions',
     href: '/dashboard/subscriptions',
@@ -45,12 +35,6 @@ const navItems: NavItem[] = [
     href: '/dashboard/services',
     icon: <Briefcase size={20} />,
   },
-  {
-    name: 'Installations',
-    href: '/dashboard/installations',
-    icon: <BarChart3 size={20} />,
-  },
-  { name: 'Settings', href: '/dashboard/settings', icon: <Settings size={20} /> },
 ];
 
 interface SidebarProps {
@@ -92,14 +76,9 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
         {/* Header */}
         <div className="flex items-center justify-between border-b border-sidebar-border px-4 py-6">
           <div className="flex items-center gap-2">
-             <div className="flex h-20 w-20 items-center justify-center rounded-lg ">
+             <div className="flex h-20 w-50 items-center justify-center brightness-100 contrast-100 transition-all duration-300 hover:brightness-90 hover:contrast-90">
                <Image src="/logo.png" alt="Logo" width={100} height={30} />
              </div>
-            {!collapsed && (
-              <div className="flex flex-col">
-                <span className="text-xs text-blue">Admin</span>
-              </div>
-            )}
           </div>
           <button
             onClick={onClose}

@@ -13,6 +13,7 @@ const engineerNavItems = [
   { name: 'Find Customer', href: '/engineer/customer-lookup', icon: <Search size={20} /> },
   { name: 'New Installation', href: '/engineer/installations/new', icon: <ClipboardList size={20} /> },
   { name: 'My Installations', href: '/engineer/installations', icon: <History size={20} /> },
+  { name: 'Service Requests', href: '/engineer/service-requests', icon: <Wrench size={20} /> },
 ];
 
 export default function EngineerLayout({
