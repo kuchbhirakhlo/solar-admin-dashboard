@@ -68,21 +68,21 @@ export default function EngineerDashboardPage() {
       description: 'Look up customer details by mobile number',
       icon: <Search size={24} className="text-primary" />,
       href: '/engineer/customer-lookup',
-      color: 'bg-blue-50 dark:bg-blue-950/20',
+      color: 'bg-blue-50',
     },
     {
       title: 'New Installation',
       description: 'Record inverter, solar panel & wiring details',
       icon: <ClipboardList size={24} className="text-primary" />,
       href: '/engineer/installations/new',
-      color: 'bg-green-50 dark:bg-green-950/20',
+      color: 'bg-green-50',
     },
     {
       title: 'My Installations',
       description: 'View all your completed installations',
       icon: <History size={24} className="text-primary" />,
       href: '/engineer/installations',
-      color: 'bg-purple-50 dark:bg-purple-950/20',
+      color: 'bg-purple-50',
     },
   ];
 

@@ -149,7 +149,7 @@ export default function NewInstallationPage() {
 
       {/* Success Message */}
       {success && (
-        <div className="flex items-center gap-2 rounded-lg bg-green-50 dark:bg-green-950/20 p-4 text-sm text-green-800 dark:text-green-400 border border-green-200 dark:border-green-900">
+        <div className="flex items-center gap-2 rounded-lg bg-green-50 p-4 text-sm text-green-800 border border-green-200">
           <CheckCircle size={16} />
           {success}
         </div>

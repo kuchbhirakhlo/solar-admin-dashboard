@@ -177,7 +177,7 @@ export default function SubscriptionsPage() {
                     <div>
                       <h3 className="text-2xl font-bold text-foreground">{plan.name}</h3>
                       {!plan.isActive && (
-                        <span className="inline-block mt-1 rounded-full bg-yellow-100 dark:bg-yellow-900/30 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:text-yellow-300">
+                        <span className="inline-block mt-1 rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800">
                           Inactive
                         </span>
                       )}

@@ -1,12 +1,13 @@
 import { cn } from '@/lib/utils';
-import { CheckCircle2, Circle, FileText, Wrench, ClipboardCheck, Building2 } from 'lucide-react';
+import { CheckCircle2, Circle, FileText, Wrench, ClipboardCheck, Building2, Award } from 'lucide-react';
 
-export type ProjectStatus = 
+export type ProjectStatus =
   | 'registration'
   | 'upload_agreement'
   | 'installation'
   | 'project_commissioning'
-  | 'discom_approval';
+  | 'discom_approval'
+  | 'completed';
 
 interface ProjectStatusBarProps {
   currentStatus: ProjectStatus;
@@ -21,6 +22,7 @@ const statusStages: { value: ProjectStatus; label: string; icon: React.ElementTy
   { value: 'installation', label: 'Installation', icon: Wrench },
   { value: 'project_commissioning', label: 'Project Commissioning', icon: ClipboardCheck },
   { value: 'discom_approval', label: 'Discom Approval', icon: Building2 },
+  { value: 'completed', label: 'Completed', icon: Award },
 ];
 
 export function ProjectStatusBar({ 
@@ -50,7 +52,7 @@ export function ProjectStatusBar({
           const Icon = stage.icon;
           const isCompleted = index < currentIndex;
           const isCurrent = index === currentIndex;
-          const isClickable = !readonly && onChange && (isCompleted || isCurrent || index === currentIndex + 1);
+          const isClickable = !readonly && !!onChange;
 
           return (
             <div key={stage.value} className="flex flex-1 items-center">

@@ -121,11 +121,16 @@ export default function AddEmployeePage() {
       return;
     }
 
+    // Strip +91 prefix (and any spaces/dashes) so the phone is saved without the country code
+    const normalizedPhone = formData.phone
+      .replace(/^\s*\+?91[\s-]*/, '')
+      .replace(/[\s-]/g, '');
+
     try {
       await addEmployee({
         name: formData.name,
         email: formData.email,
-        phone: formData.phone,
+        phone: normalizedPhone,
         password: formData.password,
         role: formData.role as 'engineer' | 'registrar' | 'agent',
         status: formData.status as 'active' | 'inactive' | 'suspended',
@@ -222,7 +227,7 @@ export default function AddEmployeePage() {
                   <Input
                     name="phone"
                     type="tel"
-                    placeholder="+91 98765 43210"
+                    placeholder="98765 43210"
                     value={formData.phone}
                     onChange={handleChange}
                     required

@@ -15,7 +15,7 @@ export default function HomePage() {
           {/* Logo */}
           <div className="text-center mb-8">
             <div className="flex justify-center mb-4">
-              <div className="h-24 w-24 rounded-full bg-primary/10 flex items-center justify-center">
+              <div className="h-24 w-24 rounded-full bg-gray-700 flex items-center justify-center">
                 <Image 
                   src="/logo.png" 
                   alt="SolarXpert Logo"

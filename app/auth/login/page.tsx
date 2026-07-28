@@ -11,8 +11,8 @@ import Image from 'next/image';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('admin@solar.com');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rememberMe, setRememberMe] = useState(true);
@@ -27,6 +27,11 @@ export default function LoginPage() {
       // Store session data in sessionStorage
       sessionStorage.setItem('isAuthenticated', 'true');
       sessionStorage.setItem('loginTimestamp', Date.now().toString());
+      // Clear any registrar session flags so admin gets full access
+      sessionStorage.removeItem('registrarAuthenticated');
+      sessionStorage.removeItem('registrarUid');
+      sessionStorage.removeItem('registrarName');
+      sessionStorage.removeItem('registrarPhone');
       router.push('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
@@ -72,7 +77,7 @@ export default function LoginPage() {
               </label>
               <Input
                 type="email"
-                placeholder="admin@solar.com"
+                placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={loading}

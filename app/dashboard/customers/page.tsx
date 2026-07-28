@@ -4,12 +4,12 @@ import { useFirestoreCollectionRealtime } from '@/lib/hooks/useFirestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/layout/page-header';
-import { StatusBadge } from '@/components/dashboard/status-badge';
-import { Search, ChevronRight } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { Customer } from '@/lib/services/customers';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function CustomersPage() {
+  const router = useRouter();
   const { data: customers, loading, error } = useFirestoreCollectionRealtime<Customer>('customers');
 
   if (loading) {
@@ -70,16 +70,7 @@ export default function CustomersPage() {
                   System Size
                 </th>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">
-                  Account Status
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">
                   Project Status
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">
-                  Total Spent
-                </th>
-                <th className="px-6 py-3 text-center text-sm font-semibold text-foreground">
-                  Action
                 </th>
               </tr>
             </thead>
@@ -87,7 +78,8 @@ export default function CustomersPage() {
               {customers?.map((customer) => (
                 <tr
                   key={customer.id}
-                  className="hover:bg-muted/50 transition-colors"
+                  onClick={() => router.push(`/dashboard/customers/${customer.id}`)}
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
                 >
                   <td className="px-6 py-4">
                     <p className="font-medium text-foreground">{customer.name}</p>
@@ -99,25 +91,9 @@ export default function CustomersPage() {
                     {customer.systemSize}
                   </td>
                   <td className="px-6 py-4">
-                    <StatusBadge status={customer.status as any} />
-                  </td>
-                  <td className="px-6 py-4">
                     <span className="text-sm text-foreground">
                       {customer.projectStatus ? customer.projectStatus.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Registration'}
                     </span>
-                  </td>
-                  <td className="px-6 py-4 font-semibold text-foreground">
-                    {customer.totalSpent}
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <Link href={`/dashboard/customers/${customer.id}`}>
-                      <button className="inline-flex items-center justify-center rounded-lg p-2 hover:bg-muted">
-                        <ChevronRight
-                          size={20}
-                          className="text-muted-foreground"
-                        />
-                      </button>
-                    </Link>
                   </td>
                 </tr>
               ))}

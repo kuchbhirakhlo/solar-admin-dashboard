@@ -26,13 +26,16 @@ export interface Customer {
   updatedAt?: string;
   alternatePhone?: string;
   connectionNumber?: string;
-  projectStatus?: 'registration' | 'upload_agreement' | 'installation' | 'project_commissioning' | 'discom_approval';
+  projectStatus?: 'registration' | 'upload_agreement' | 'installation' | 'project_commissioning' | 'discom_approval' | 'completed';
   documents?: {
     aadhaarFront?: string;
     aadhaarBack?: string;
     panCard?: string;
     bankPassbook?: string;
+    cancelledCheque?: string;
     electricityBill?: string;
+    propertyDocuments?: string;
+    rooftopPhotos?: string;
     gpsPhoto?: string;
     ownershipDocument?: string;
   };

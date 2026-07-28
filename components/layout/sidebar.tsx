@@ -9,9 +9,13 @@ import {
   Zap,
   Briefcase,
   X,
+  LogOut,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import { useFirebaseAuth } from '@/lib/firebase-context';
+import { signOut } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 import Image from 'next/image';
 
 interface NavItem {
@@ -45,6 +49,18 @@ interface SidebarProps {
 export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const [isRegistrar, setIsRegistrar] = useState(false);
+  const { user } = useFirebaseAuth();
+
+  useEffect(() => {
+    // Registrars login via the registrar portal which sets this session flag.
+    // They should not see the Employee (agents) section.
+    setIsRegistrar(sessionStorage.getItem('registrarAuthenticated') === 'true');
+  }, []);
+
+  const visibleNavItems = navItems.filter(
+    (item) => !(isRegistrar && item.href === '/dashboard/agents')
+  );
 
   const isActive = (href: string) => {
     // For the root dashboard, only match exact path to avoid highlighting
@@ -74,9 +90,9 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
         )}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-sidebar-border px-4 py-6">
-          <div className="flex items-center gap-2">
-             <div className="flex h-20 w-50 items-center justify-center brightness-100 contrast-100 transition-all duration-300 hover:brightness-90 hover:contrast-90">
+        <div className="flex items-center justify-center border-b border-sidebar-border px-4 py-6">
+          <div className="flex justify-center items-center gap-2">
+             <div className="flex h-20 w-20 items-center justify-center bg-gray-700 rounded-full">
                <Image src="/logo.png" alt="Logo" width={100} height={30} />
              </div>
           </div>
@@ -90,7 +106,7 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
 
         {/* Navigation */}
         <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-          {navItems.map((item) => (
+          {visibleNavItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
@@ -106,7 +122,7 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                 <>
                   <span className="flex-1">{item.name}</span>
                   {item.badge && (
-                    <span className="rounded-full bg-red-500 px-2 py-0.5 text-xs font-semibold text-white">
+                    <span className="rounded-full bg-red-500 px-2 py-0.5 text-xs font-semibold text-foreground">
                       {item.badge}
                     </span>
                   )}
@@ -124,14 +140,17 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
               collapsed ? 'justify-center' : ''
             )}
           >
-            <div className="h-8 w-8 rounded-full bg-sidebar-accent/30" />
-            {!collapsed && (
-              <div className="flex-1 text-sm">
-                <p className="font-medium text-sidebar-foreground">Admin User</p>
-                <p className="text-xs text-sidebar-foreground/60">admin@solar.com</p>
-              </div>
-            )}
           </div>
+          <button
+            onClick={() => signOut(auth)}
+            className={cn(
+              'mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-red-500/10 hover:text-red-500',
+              collapsed && 'justify-center'
+            )}
+          >
+            <LogOut size={20} />
+            {!collapsed && <span>Logout</span>}
+          </button>
         </div>
       </aside>
     </>

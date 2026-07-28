@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { Sidebar } from './sidebar';
-import { TopHeader } from './top-header';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -44,7 +43,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Main Content */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Top Header */}
-        <TopHeader onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
 
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto">

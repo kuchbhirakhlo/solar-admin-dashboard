@@ -14,19 +14,11 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/$(collection)/$(request.auth.uid)).data.role;
     }
 
-    // Check if authenticated user's email matches known admin emails
-    function isEmailAdmin() {
-      return request.auth.token.email == 'admin@solar.in'
-        || request.auth.token.email == 'SolarXpert@gmail.com'
-        || request.auth.token.email == 'admin@solar.com';
-    }
-
-    // Admin check: looks in users collection, admins collection, or falls back to email
+    // Admin check: looks in users collection (doc ID = Firebase Auth UID) or admins collection
     function isAdmin() {
       return isAuthenticated()
         && (roleInCollection('users') == 'admin'
-            || roleInCollection('admins') == 'admin'
-            || isEmailAdmin());
+            || roleInCollection('admins') == 'admin');
     }
 
     // Engineer check: authenticated user with role 'engineer' in users collection
@@ -52,9 +44,6 @@ service cloud.firestore {
     // ============ COLLECTION RULES ============
 
     // --- Users ---
-    // Read is open for unauthenticated users (required for phone-based login lookup).
-    // Only contains employee profiles (name, email, phone, role, status) — non-sensitive directory data.
-    // Write operations remain protected.
     match /users/{userId} {
       allow read: if true;
       allow create: if isAdmin() || request.auth.uid == userId;
@@ -63,14 +52,12 @@ service cloud.firestore {
     }
 
     // --- Admins ---
-    match /admins/{adminId} {
+    match /admins/{adminId} { 
       allow read: if isAuthenticated();
       allow write: if request.auth.uid == adminId;
     }
 
     // --- Customers ---
-    // Admins: full access. Registrars: read/create/update (for registration & management).
-    // Engineers: read only (for customer lookup). Customers: can read/update their own.
     match /customers/{customerId} {
       allow read: if isAuthenticated();
       allow create: if isAdmin() || isRegistrar() || isAuthenticated();
@@ -79,8 +66,6 @@ service cloud.firestore {
     }
 
     // --- Service Requests ---
-    // Admins: full access. Registrars: read/create/update (manage requests).
-    // Engineers: read all, update their own assigned requests (start work, complete, cancel).
     match /serviceRequests/{requestId} {
       allow read: if isAuthenticated();
       allow create: if isAdmin() || isRegistrar() || isAuthenticated();
@@ -90,7 +75,6 @@ service cloud.firestore {
     }
 
     // --- Subscriptions ---
-    // Admins: full access. Registrars: read (view active subscriptions). Engineers: read.
     match /subscriptions/{subscriptionId} {
       allow read: if isAuthenticated();
       allow create: if isAdmin() || isRegistrar();
@@ -99,7 +83,6 @@ service cloud.firestore {
     }
 
     // --- Subscription Plans ---
-    // Admins: full access. Registrars: read (view available plans). Engineers: read.
     match /subscriptionPlans/{planId} {
       allow read: if isAuthenticated();
       allow create: if isAdmin();
@@ -108,7 +91,6 @@ service cloud.firestore {
     }
 
     // --- Notifications ---
-    // Admins: full access. Engineers/registrars: read.
     match /notifications/{notificationId} {
       allow read: if isAuthenticated();
       allow create: if isAdmin();
@@ -117,7 +99,6 @@ service cloud.firestore {
     }
 
     // --- Reports ---
-    // Admins: full access. Engineers/registrars: read.
     match /reports/{reportId} {
       allow read: if isAuthenticated();
       allow create: if isAdmin();
@@ -126,7 +107,6 @@ service cloud.firestore {
     }
 
     // --- Partner ---
-    // Admins: full access. Engineers/registrars: read.
     match /Partner/{agentId} {
       allow read: if isAuthenticated();
       allow create: if isAdmin();
@@ -135,7 +115,6 @@ service cloud.firestore {
     }
 
     // --- Engineers ---
-    // Admins: full access. Engineers: read their own record. Registrars: read.
     match /engineers/{engineerId} {
       allow read: if isAuthenticated();
       allow create: if isAdmin();
@@ -144,8 +123,6 @@ service cloud.firestore {
     }
 
     // --- Installations ---
-    // Admins: full access. Engineers: create, read/update their own installations.
-    // Registrars: read (view installation status).
     match /installations/{installationId} {
       allow read: if isAuthenticated();
       allow create: if isAdmin() || isEngineer();
@@ -155,8 +132,6 @@ service cloud.firestore {
     }
 
     // --- Payments ---
-    // Admins: full access. Registrars: read/create (record payments from registration).
-    // Engineers: read.
     match /payments/{paymentId} {
       allow read: if isAuthenticated();
       allow create: if isAdmin() || isRegistrar();
