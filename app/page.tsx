@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { Shield, Wrench, UserCheck } from 'lucide-react';
+import { Shield, Wrench, UserCheck, FileText } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 
@@ -64,6 +64,17 @@ export default function HomePage() {
           <p className="mt-8 text-center text-xs text-muted-foreground">
             Partner? Use the mobile app to login
           </p>
+        </div>
+
+        {/* Policy Link - Bottom Right */}
+        <div className="mt-6 flex justify-end">
+          <button
+            onClick={() => router.push('/policy')}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+          >
+            <FileText size={14} />
+            Policies
+          </button>
         </div>
       </div>
     </div>
