@@ -31,12 +31,16 @@ function formatTimestamp(value: string | { seconds: number; nanoseconds: number 
 
 export default function CustomerDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ source?: string }>;
 }) {
   const { id } = use(params);
+  const { source } = use(searchParams);
+  const profileOnly = source === 'users';
   const router = useRouter();
-  const { data: customerData, loading, error } = useFirestoreDocRealtime<Customer>('customers', id);
+  const { data: customerData, loading, error } = useFirestoreDocRealtime<Customer>(profileOnly ? 'users' : 'customers', id);
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -44,7 +48,7 @@ export default function CustomerDetailPage({
   const [actionError, setActionError] = useState<string | null>(null);
 
   const handleStatusChange = async (newStatus: ProjectStatus) => {
-    if (updatingStatus) return;
+    if (profileOnly || updatingStatus) return;
     setUpdatingStatus(true);
     setActionError(null);
 
@@ -58,6 +62,7 @@ export default function CustomerDetailPage({
   };
 
   const handleDelete = async () => {
+    if (profileOnly) return;
     setDeleting(true);
     setActionError(null);
 
@@ -103,7 +108,7 @@ export default function CustomerDetailPage({
           { label: customer.name },
         ]}
         action={
-          <Button
+          !profileOnly && <Button
             variant="outline"
             className="text-red-600 hover:bg-red-50"
             onClick={() => setDeleteDialogOpen(true)}
@@ -130,11 +135,12 @@ export default function CustomerDetailPage({
             )}
             <ProjectStatusBar
               currentStatus={customer.projectStatus || 'registration'}
-              onChange={handleStatusChange}
+              onChange={profileOnly ? undefined : handleStatusChange}
+              readonly={profileOnly}
             />
-            <p className="mt-4 text-xs text-muted-foreground">
+            {!profileOnly && <p className="mt-4 text-xs text-muted-foreground">
               Click on any stage to update the project status.
-            </p>
+            </p>}
           </div>
 
       {/* Main Content */}

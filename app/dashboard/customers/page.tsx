@@ -7,10 +7,24 @@ import { PageHeader } from '@/components/layout/page-header';
 import { Search } from 'lucide-react';
 import { Customer } from '@/lib/services/customers';
 import { useRouter } from 'next/navigation';
+import { where } from 'firebase/firestore';
+
+type CustomerProfile = Partial<Customer> & { id?: string; customerId?: string };
 
 export default function CustomersPage() {
   const router = useRouter();
-  const { data: customers, loading, error } = useFirestoreCollectionRealtime<Customer>('customers');
+  const records = useFirestoreCollectionRealtime<Customer>('customers');
+  const profiles = useFirestoreCollectionRealtime<CustomerProfile>('users', [where('role', '==', 'customer')]);
+  const loading = records.loading || profiles.loading;
+  const error = records.error || profiles.error;
+  const customers: (CustomerProfile & { source: 'customers' | 'users' })[] =
+    (records.data || []).map((customer) => ({ ...customer, source: 'customers' }));
+  const recordIds = new Set(customers.map((customer) => customer.id));
+  for (const profile of profiles.data || []) {
+    if (!recordIds.has(profile.customerId || profile.id)) {
+      customers.push({ ...profile, source: 'users' });
+    }
+  }
 
   if (loading) {
     return (
@@ -77,8 +91,8 @@ export default function CustomersPage() {
             <tbody className="divide-y divide-border">
               {customers?.map((customer) => (
                 <tr
-                  key={customer.id}
-                  onClick={() => router.push(`/dashboard/customers/${customer.id}`)}
+                  key={`${customer.source}-${customer.id}`}
+                  onClick={() => router.push(`/dashboard/customers/${customer.id}?source=${customer.source}`)}
                   className="cursor-pointer hover:bg-muted/50 transition-colors"
                 >
                   <td className="px-6 py-4">
@@ -88,7 +102,7 @@ export default function CustomersPage() {
                     {customer.email}
                   </td>
                   <td className="px-6 py-4 text-sm font-medium text-foreground">
-                    {customer.systemSize}
+                    {customer.systemSize ?? 'N/A'}
                   </td>
                   <td className="px-6 py-4">
                     <span className="text-sm text-foreground">
