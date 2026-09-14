@@ -19,11 +19,22 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    // Agent check — reads users/{uid}.role
+    // Agent check — reads users/{uid}.role.
+    // Accepts both 'agent' (current admin form value) and 'partner' (legacy).
     function isAgent() {
       return isSignedIn()
         && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-        && getUserData().get('role', '') == 'agent';
+        && getUserData().get('role', '') in ['agent', 'partner'];
+    }
+
+    // True when the document's stored phone (10-digit) matches the caller's
+    // Firebase Auth phone token (+91XXXXXXXXXX) — handles the format difference
+    // between admin storage (10-digit) and Firebase Auth E.164 (+91...).
+    function phoneMatchesToken(storedPhone) {
+      let token = request.auth.token.phone_number;
+      return token == storedPhone
+        || token == '+91' + storedPhone
+        || storedPhone == '+91' + token;
     }
 
     // ── users ─────────────────────────────────────────────────────────────────
@@ -41,19 +52,22 @@ service cloud.firestore {
     //   Agent creates users/{customerId} for a new customer. isAgent() covers this.
     //
     match /users/{userId} {
-      // Any signed-in user can read a doc where phone == their own phone number
-      // (needed for agent login lookup by phone, and for customer self-lookup).
-      // Own doc read is always allowed. Agents can read any user doc.
+      // Own doc always readable. Phone-token match allows agent/customer login
+      // lookup by phone (handles 10-digit admin storage vs +91 token format).
+      // Agents can read any user doc.
       allow read: if isOwner(userId)
-        || (isSignedIn() && resource.data.phone == request.auth.token.phone_number)
+        || (isSignedIn() && phoneMatchesToken(resource.data.phone))
         || isAgent();
 
-      // Customer creates their own doc on first OTP login.
-      // Agent creates customer user docs.
-      allow create: if (isOwner(userId) || isAgent())
-        && request.resource.data.get('role', '') == 'customer';
+      // Customer creates own doc on first OTP login (role must be 'customer').
+      // Agent creates customer user docs (any role allowed for agents).
+      // Agent may also create their own doc (role='agent') if admin only created
+      // the Firebase Auth account but not the Firestore profile.
+      allow create: if isAgent()
+        || (isOwner(userId) && request.resource.data.get('role', '') == 'customer')
+        || (isOwner(userId) && request.resource.data.get('role', '') in ['agent', 'partner']);
 
-      // Preserve profile editing without allowing changes to access-control fields.
+      // Profile editing: owner can update non-sensitive fields; agent can update any.
       allow update: if (isOwner(userId) || isAgent())
         && !request.resource.data.diff(resource.data).affectedKeys()
           .hasAny(['role', 'status', 'customerId', 'uid']);
@@ -69,8 +83,8 @@ service cloud.firestore {
     //
     match /customers/{customerId} {
       allow read: if isOwner(customerId)
-        // Allow customer to find their record by phone (for login linking)
-        || (isSignedIn() && resource.data.phone == request.auth.token.phone_number)
+        // Allow customer to find their record by phone (handles 10-digit vs +91 format)
+        || (isSignedIn() && phoneMatchesToken(resource.data.phone))
         // Allow agent who owns this customer record to read it
         || (isSignedIn() && resource.data.assignedAgentId == request.auth.uid)
         || isAgent();
