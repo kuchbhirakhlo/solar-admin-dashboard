@@ -3,8 +3,7 @@ import {
   updateFirestoreDoc,
 } from '@/lib/hooks/useFirestore';
 import { addUser } from './users';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { withEmployeeAccount } from './employeeAuth';
 import {
   collection,
   query,
@@ -14,6 +13,7 @@ import {
   doc,
   orderBy,
   limit,
+  writeBatch,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -68,49 +68,50 @@ export async function addEngineer(
   }
 ) {
   try {
-    // 1. Create Firebase Auth account
-    const userCredential = await createUserWithEmailAndPassword(
-      auth,
+    return await withEmployeeAccount(
       engineer.email,
-      engineer.password
+      engineer.password,
+      async (uid) => {
+        const batch = writeBatch(db);
+
+        // 2. Create user record in Firestore 'users' collection
+        const userData = {
+          name: engineer.name,
+          email: engineer.email,
+          phone: engineer.phone,
+          role: 'engineer' as const,
+          status: 'active' as const,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
+        // Store in users collection with the Firebase Auth UID as the document ID
+        const userDocRef = doc(db, 'users', uid);
+        batch.set(userDocRef, userData);
+
+        // 3. Create engineer-specific record in 'engineers' collection
+        const engineerData = {
+          uid,
+          name: engineer.name,
+          email: engineer.email,
+          phone: engineer.phone,
+          role: 'engineer',
+          status: 'active',
+          certification: engineer.certification || '',
+          licenseNumber: engineer.licenseNumber || '',
+          licenseExpiration: engineer.licenseExpiration || '',
+          residentialWork: engineer.residentialWork || false,
+          commercialWork: engineer.commercialWork || false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
+        const engineerRef = doc(collection(db, 'engineers'));
+        batch.set(engineerRef, engineerData);
+        await batch.commit();
+        return { engineerId: engineerRef.id, uid };
+      }
     );
-    const firebaseUser = userCredential.user;
-
-    // 2. Create user record in Firestore 'users' collection
-    const userData = {
-      name: engineer.name,
-      email: engineer.email,
-      phone: engineer.phone,
-      role: 'engineer' as const,
-      status: 'active' as const,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    // Store in users collection with the Firebase Auth UID as the document ID
-    const { doc: firestoreDoc, setDoc } = await import('firebase/firestore');
-    const userDocRef = firestoreDoc(db, 'users', firebaseUser.uid);
-    await setDoc(userDocRef, userData);
-
-    // 3. Create engineer-specific record in 'engineers' collection
-    const engineerData = {
-      uid: firebaseUser.uid,
-      name: engineer.name,
-      email: engineer.email,
-      phone: engineer.phone,
-      role: 'engineer',
-      status: 'active',
-      certification: engineer.certification || '',
-      licenseNumber: engineer.licenseNumber || '',
-      licenseExpiration: engineer.licenseExpiration || '',
-      residentialWork: engineer.residentialWork || false,
-      commercialWork: engineer.commercialWork || false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    const engineerId = await addFirestoreDoc('engineers', engineerData);
-    return { engineerId, uid: firebaseUser.uid };
   } catch (error) {
     throw new Error(
       `Failed to add engineer: ${error instanceof Error ? error.message : 'Unknown error'}`

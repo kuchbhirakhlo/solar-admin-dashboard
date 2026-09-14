@@ -19,9 +19,8 @@ import {
   addFirestoreDoc,
   updateFirestoreDoc,
 } from '@/lib/hooks/useFirestore';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { collection, doc, writeBatch } from 'firebase/firestore';
+import { withEmployeeAccount } from './employeeAuth';
 import { db } from '@/lib/firebase';
 
 export async function addUser(user: Omit<User, 'id'>) {
@@ -73,74 +72,73 @@ export async function addEmployee(employee: {
   const emailExists = await checkEmailExists(employee.email);
   if (emailExists) {
     throw new Error(
-      `An employee with email "${employee.email}" already exists. ` +
-      `Please modify the email address to make it unique (e.g., add a suffix like "${employee.email.replace('@', '-2@')}").`
+      `An account with email "${employee.email}" already exists. Use the existing account or the new employee's own email address.`
     );
   }
 
   try {
-    // 1. Create Firebase Auth account with email and password
-    const userCredential = await createUserWithEmailAndPassword(
-      auth,
+    return await withEmployeeAccount(
       employee.email,
-      employee.password
+      employee.password,
+      async (uid) => {
+        const batch = writeBatch(db);
+
+        // 2. Create user record in Firestore 'users' collection
+        //    Use the Firebase Auth UID as the document ID for role lookups
+        const userData = {
+          name: employee.name,
+          email: employee.email,
+          phone: employee.phone,
+          role: employee.role,
+          status: employee.status,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
+        const userDocRef = doc(db, 'users', uid);
+        batch.set(userDocRef, userData);
+
+        // 3. If role is engineer, also create entry in 'engineers' collection
+        if (employee.role === 'engineer') {
+          const engineerData = {
+            uid,
+            name: employee.name,
+            email: employee.email,
+            phone: employee.phone,
+            role: 'engineer',
+            status: employee.status,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          batch.set(doc(collection(db, 'engineers')), engineerData);
+        }
+
+        // 4. If role is agent/partner, also create entry in 'Partner' collection
+        if (employee.role === 'agent' || employee.role === 'partner') {
+          const partnerData = {
+            uid,
+            name: employee.name,
+            email: employee.email,
+            phone: employee.phone,
+            role: employee.role === 'agent' ? 'partner' : 'partner',
+            status: employee.status,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          batch.set(doc(collection(db, 'Partner')), partnerData);
+        }
+
+        await batch.commit();
+        return { uid };
+      }
     );
-    const firebaseUser = userCredential.user;
-
-    // 2. Create user record in Firestore 'users' collection
-    //    Use the Firebase Auth UID as the document ID for role lookups
-    const userData = {
-      name: employee.name,
-      email: employee.email,
-      phone: employee.phone,
-      role: employee.role,
-      status: employee.status,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    const userDocRef = doc(db, 'users', firebaseUser.uid);
-    await setDoc(userDocRef, userData);
-
-    // 3. If role is engineer, also create entry in 'engineers' collection
-    if (employee.role === 'engineer') {
-      const engineerData = {
-        uid: firebaseUser.uid,
-        name: employee.name,
-        email: employee.email,
-        phone: employee.phone,
-        role: 'engineer',
-        status: employee.status,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      await addFirestoreDoc('engineers', engineerData);
-    }
-
-    // 4. If role is agent/partner, also create entry in 'Partner' collection
-    if (employee.role === 'agent' || employee.role === 'partner') {
-      const partnerData = {
-        uid: firebaseUser.uid,
-        name: employee.name,
-        email: employee.email,
-        phone: employee.phone,
-        role: employee.role === 'agent' ? 'partner' : 'partner',
-        status: employee.status,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      await addFirestoreDoc('Partner', partnerData);
-    }
-
-    return { uid: firebaseUser.uid };
   } catch (error) {
     // Improve error messages for common Firebase Auth errors
     const message = error instanceof Error ? error.message : 'Unknown error';
     
     if (message.includes('auth/email-already-in-use')) {
       throw new Error(
-        `Email "${employee.email}" is already registered in the system. ` +
-        `Please modify the email address (e.g., change the name suffix) to make it unique.`
+        `Email "${employee.email}" is already registered in Firebase Authentication. Use the existing account; a previous failed attempt may have created it without an employee profile.`
       );
     }
     

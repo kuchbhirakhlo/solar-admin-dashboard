@@ -1,17 +1,157 @@
 rules_version = '2';
-
-// Firestore rules only; Cloud Storage requires a separate ruleset.
-// Provision users/{authUid} and the first admin through a trusted Admin SDK
-// or Firebase Console. Roles and customerId links must never be self-assigned.
-// Before deploying:
-// - Replace pre-auth phone lookups with Firebase Auth or a trusted login service.
-// - Create employee Auth accounts without replacing the signed-in admin session.
-// - Link customer Auth UIDs to users/{authUid}.customerId (customer records use auto IDs).
-// - Engineer request queries must use the same ID stored in assignedEngineerId:
-//   the admin UI currently stores engineers document IDs, while the portal queries UIDs.
-// Browser sessionStorage values are not authentication credentials.
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // ── Helper functions ──────────────────────────────────────────────────────
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // True when the document's ID matches the caller's Firebase Auth UID
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // Reads caller's user doc to get their role.
+    // ONLY call this when the user is already authenticated and their doc exists.
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Agent check — reads users/{uid}.role
+    function isAgent() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && getUserData().get('role', '') == 'agent';
+    }
+
+    // ── users ─────────────────────────────────────────────────────────────────
+    //
+    // Flow 1 — Customer self-registration:
+    //   After OTP, Firebase Auth UID is known. Customer creates users/{their_uid}.
+    //   Rule: isOwner(userId) covers this — auth.uid == doc.id.
+    //
+    // Flow 2 — Agent login lookup:
+    //   verifyOtp queries users WHERE phone == callerPhone AND role == 'agent'.
+    //   Firestore evaluates rules per-document. We allow read if the document's
+    //   phone matches the caller's verified phone token — no extra Firestore read.
+    //
+    // Flow 3 — Agent writes customer's users doc:
+    //   Agent creates users/{customerId} for a new customer. isAgent() covers this.
+    //
+    match /users/{userId} {
+      // Any signed-in user can read a doc where phone == their own phone number
+      // (needed for agent login lookup by phone, and for customer self-lookup).
+      // Own doc read is always allowed. Agents can read any user doc.
+      allow read: if isOwner(userId)
+        || (isSignedIn() && resource.data.phone == request.auth.token.phone_number)
+        || isAgent();
+
+      // Customer creates their own doc on first OTP login.
+      // Agent creates customer user docs.
+      allow create: if (isOwner(userId) || isAgent())
+        && request.resource.data.get('role', '') == 'customer';
+
+      // Preserve profile editing without allowing changes to access-control fields.
+      allow update: if (isOwner(userId) || isAgent())
+        && !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['role', 'status', 'customerId', 'uid']);
+
+      allow delete: if false;
+    }
+
+    // ── customers ─────────────────────────────────────────────────────────────
+    //
+    // This is the CRM table — created and managed by agents.
+    // Customers can read their own record (matched by UID or phone).
+    // Agents have full read/write access.
+    //
+    match /customers/{customerId} {
+      allow read: if isOwner(customerId)
+        // Allow customer to find their record by phone (for login linking)
+        || (isSignedIn() && resource.data.phone == request.auth.token.phone_number)
+        // Allow agent who owns this customer record to read it
+        || (isSignedIn() && resource.data.assignedAgentId == request.auth.uid)
+        || isAgent();
+
+      allow create: if isAgent();
+      allow update: if isAgent();
+      allow delete: if false;
+    }
+
+    // ── dashboard ─────────────────────────────────────────────────────────────
+    //
+    // One doc per customer (doc ID == customer Firebase Auth UID).
+    // Customer reads their own. Agents read all and write.
+    // Customer can CREATE their own dashboard doc on first login (auto-init),
+    // but only agents can UPDATE it (they push live solar production data).
+    //
+    match /dashboard/{customerId} {
+      allow read: if isOwner(customerId) || isAgent();
+      allow create: if isOwner(customerId) || isAgent();
+      allow update: if isAgent();
+      allow delete: if false;
+    }
+
+    // ── serviceRequests ───────────────────────────────────────────────────────
+    //
+    // Customers create and read their own requests.
+    // Agents manage all requests.
+    // Uses direct field comparison (assignedAgentId) to avoid extra Firestore
+    // reads for agent's own assigned requests.
+    //
+    match /serviceRequests/{requestId} {
+      allow read: if isSignedIn() && (
+        resource.data.customerId == request.auth.uid
+        || resource.data.assignedAgentId == request.auth.uid
+        || isAgent()
+      );
+      allow create: if isSignedIn()
+        && request.resource.data.customerId == request.auth.uid;
+      allow update: if isSignedIn() && (
+        resource.data.customerId == request.auth.uid
+        || resource.data.assignedAgentId == request.auth.uid
+        || isAgent()
+      );
+      allow delete: if false;
+    }
+
+    // ── subscriptions ─────────────────────────────────────────────────────────
+    match /subscriptions/{subscriptionId} {
+      allow read: if isSignedIn() && (
+        resource.data.customerId == request.auth.uid || isAgent()
+      );
+      allow create: if isAgent();
+      allow update: if isAgent();
+      allow delete: if false;
+    }
+
+    // ── reports ───────────────────────────────────────────────────────────────
+    match /reports/{reportId} {
+      allow read: if isSignedIn() && (
+        resource.data.customerId == request.auth.uid || isAgent()
+      );
+      allow create: if isAgent();
+      allow update: if isAgent();
+      allow delete: if false;
+    }
+
+    // ── notifications ─────────────────────────────────────────────────────────
+    match /notifications/{notificationId} {
+      allow read: if isSignedIn() && (
+        resource.data.userId == request.auth.uid || isAgent()
+      );
+      allow create: if isSignedIn();
+      // Users can only mark their own notifications as read
+      allow update: if isSignedIn()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow delete: if false;
+    }
+
+    // Web dashboard permissions supplement the app rules above.
+    // Matching allow rules are additive; deletes are granted only to admins.
     function signedIn() {
       return request.auth != null;
     }
@@ -219,6 +359,12 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
+    // App solar dashboards also support admin management.
+    match /dashboard/{customerId} {
+      allow read, create, update, delete: if isAdmin();
+    }
+
+    // ── deny everything else ──────────────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;
     }
