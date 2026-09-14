@@ -21,7 +21,7 @@ import {
 } from '@/lib/hooks/useFirestore';
 import { collection, doc, writeBatch } from 'firebase/firestore';
 import { withEmployeeAccount } from './employeeAuth';
-import { db } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 
 export async function addUser(user: Omit<User, 'id'>) {
   try {
@@ -58,7 +58,7 @@ async function checkEmailExists(email: string): Promise<boolean> {
 /**
  * Create a new employee account (engineer, registrar, or partner).
  * This creates both a Firebase Auth account (for login) and a Firestore user record.
- * The employee can then login with their email and the password set by admin.
+ * Partners use phone OTP; other employees use email and the password set by admin.
  */
 export async function addEmployee(employee: {
   name: string;
@@ -68,6 +68,23 @@ export async function addEmployee(employee: {
   role: 'engineer' | 'registrar' | 'agent' | 'partner';
   status: 'active' | 'inactive' | 'suspended';
 }) {
+  if (employee.role === 'agent' || employee.role === 'partner') {
+    await auth.authStateReady();
+    if (!auth.currentUser) throw new Error('Sign in as an administrator before creating partners.');
+    const token = await auth.currentUser.getIdToken();
+    const response = await fetch('/api/partners', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        name: employee.name, email: employee.email, phone: employee.phone,
+        role: employee.role, status: employee.status,
+      }),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to create partner.');
+    return result as { uid: string };
+  }
+
   // Pre-check if email already exists in Firestore
   const emailExists = await checkEmailExists(employee.email);
   if (emailExists) {
@@ -111,21 +128,6 @@ export async function addEmployee(employee: {
             updatedAt: new Date().toISOString(),
           };
           batch.set(doc(collection(db, 'engineers')), engineerData);
-        }
-
-        // 4. If role is agent/partner, also create entry in 'Partner' collection
-        if (employee.role === 'agent' || employee.role === 'partner') {
-          const partnerData = {
-            uid,
-            name: employee.name,
-            email: employee.email,
-            phone: employee.phone,
-            role: employee.role === 'agent' ? 'partner' : 'partner',
-            status: employee.status,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          };
-          batch.set(doc(collection(db, 'Partner')), partnerData);
         }
 
         await batch.commit();

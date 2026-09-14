@@ -203,30 +203,6 @@ export default function EmployeePage() {
                   <StatusBadge status={(selectedAgent.status as any) || 'active'} />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">City</p>
-                  <p className="text-sm font-medium text-foreground">
-                    {selectedAgent.city}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">State</p>
-                  <p className="text-sm font-medium text-foreground">
-                    {selectedAgent.state}
-                  </p>
-                </div>
-                <div className="col-span-2">
-                  <p className="text-xs text-muted-foreground">Address</p>
-                  <p className="text-sm font-medium text-foreground">
-                    {selectedAgent.address || '-'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">ZIP Code</p>
-                  <p className="text-sm font-medium text-foreground">
-                    {selectedAgent.zipCode || '-'}
-                  </p>
-                </div>
-                <div>
                   <p className="text-xs text-muted-foreground">Role</p>
                   <p className="text-sm font-medium text-foreground">
                     {selectedAgent.role}

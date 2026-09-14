@@ -115,22 +115,17 @@ export default function AddEmployeePage() {
     setError(null);
 
     // Validate password
-    if (!formData.password || formData.password.length < 6) {
+    if (formData.role !== 'agent' && (!formData.password || formData.password.length < 6)) {
       setError('Password must be at least 6 characters long');
       setLoading(false);
       return;
     }
 
-    // Strip +91 prefix (and any spaces/dashes) so the phone is saved without the country code
-    const normalizedPhone = formData.phone
-      .replace(/^\s*\+?91[\s-]*/, '')
-      .replace(/[\s-]/g, '');
-
     try {
       await addEmployee({
         name: formData.name,
         email: formData.email,
-        phone: normalizedPhone,
+        phone: formData.role === 'agent' ? formData.phone : formData.phone.replace(/^\s*\+?91[\s-]*/, '').replace(/[\s-]/g, ''),
         password: formData.password,
         role: formData.role as 'engineer' | 'registrar' | 'agent',
         status: formData.status as 'active' | 'inactive' | 'suspended',
@@ -238,7 +233,7 @@ export default function AddEmployeePage() {
           </div>
 
           {/* Password Section */}
-          <div className="border-t border-border pt-6">
+          {formData.role !== 'agent' && <div className="border-t border-border pt-6">
             <h2 className="mb-4 text-lg font-semibold text-foreground">
               Login Password
             </h2>
@@ -310,7 +305,7 @@ export default function AddEmployeePage() {
                 Share this password securely with the employee — they will use it along with their email to login.
               </p>
             </div>
-          </div>
+          </div>}
 
           {/* Role Selection */}
           <div className="border-t border-border pt-6">
@@ -334,7 +329,7 @@ export default function AddEmployeePage() {
               </select>
               <p className="mt-1 text-xs text-muted-foreground">
                 Engineers and Registrars can login from the browser. Partners login from the mobile app.
-                All roles use their email and the password set above to login.
+                Partners use an OTP sent to their registered mobile number. Engineers and Registrars use email and password.
               </p>
             </div>
           </div>
