@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, use } from 'react';
+import { useState, use, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/layout/page-header';
-import { Mail, Phone, MapPin, Calendar, Zap, FileText } from 'lucide-react';
+import { Mail, Phone, MapPin, Calendar, Zap, FileText, CreditCard, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { Customer, updateCustomer, deleteCustomer } from '@/lib/services/customers';
 import { useFirestoreDocRealtime } from '@/lib/hooks/useFirestore';
 import { ProjectStatusBar, ProjectStatus } from '@/components/dashboard/project-status-bar';
+import { doc, onSnapshot, Timestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import {
   Dialog,
   DialogContent,
@@ -46,6 +48,14 @@ export default function CustomerDetailPage({
   const [deleting, setDeleting] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [subscription, setSubscription] = useState<SubscriptionDoc | null | undefined>(undefined);
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'subscriptions', id), (snap) => {
+      setSubscription(snap.exists() ? (snap.data() as SubscriptionDoc) : null);
+    });
+    return () => unsub();
+  }, [id]);
 
   const handleStatusChange = async (newStatus: ProjectStatus) => {
     if (profileOnly || updatingStatus) return;
@@ -377,6 +387,54 @@ export default function CustomerDetailPage({
               )}
             </div>
           )}
+
+
+          {/* Subscription */}
+          <div className="rounded-lg border border-border bg-card p-6">
+            <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-foreground">
+              <CreditCard size={20} className="text-primary" />
+              Subscription
+            </h2>
+            {subscription === undefined ? (
+              <div className="h-5 w-32 animate-pulse rounded bg-muted" />
+            ) : subscription === null ? (
+              <p className="text-sm text-muted-foreground">No active subscription</p>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Plan</p>
+                    <p className="font-semibold text-foreground capitalize">{subscription.planName || subscription.plan || '—'}</p>
+                  </div>
+                  <SubscriptionStatusBadge status={subscription.status} />
+                </div>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Start Date</p>
+                    <p className="font-medium text-foreground">{formatTs(subscription.startDate)}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Renewal Date</p>
+                    <p className="font-medium text-foreground">{formatTs(subscription.renewalDate)}</p>
+                  </div>
+                  {subscription.price != null && (
+                    <div>
+                      <p className="text-muted-foreground">Amount</p>
+                      <p className="font-medium text-foreground">
+                        ₹{subscription.price}/{subscription.period === 'yearly' ? 'yr' : 'mo'}
+                      </p>
+                    </div>
+                  )}
+                  {subscription.latestPaymentId && (
+                    <div>
+                      <p className="text-muted-foreground">Payment ID</p>
+                      <p className="font-mono text-xs text-foreground truncate">{subscription.latestPaymentId}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -415,5 +473,46 @@ export default function CustomerDetailPage({
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+// ── Subscription helpers ──────────────────────────────────────────────────────
+
+interface SubscriptionDoc {
+  plan?: string;
+  planName?: string;
+  planId?: string;
+  status?: string;
+  price?: number;
+  period?: string;
+  startDate?: Timestamp | null;
+  renewalDate?: Timestamp | null;
+  latestPaymentId?: string;
+}
+
+function formatTs(ts: Timestamp | null | undefined): string {
+  if (!ts) return '—';
+  return ts.toDate().toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+function SubscriptionStatusBadge({ status }: { status?: string }) {
+  if (!status) return null;
+  const s = status.toLowerCase();
+  const cfg =
+    s === 'active'
+      ? { icon: <CheckCircle size={14} />, label: 'Active', cls: 'bg-green-500/10 text-green-600' }
+      : s === 'expired'
+      ? { icon: <XCircle size={14} />, label: 'Expired', cls: 'bg-red-500/10 text-red-500' }
+      : { icon: <Clock size={14} />, label: status, cls: 'bg-yellow-500/10 text-yellow-600' };
+
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${cfg.cls}`}>
+      {cfg.icon}
+      {cfg.label}
+    </span>
   );
 }

@@ -1,10 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useFirestoreCollectionRealtime } from '@/lib/hooks/useFirestore';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/layout/page-header';
-import { Plus, Check, Edit2, Trash2, X } from 'lucide-react';
+import { Plus, Check, Edit2, Trash2, X, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Timestamp, doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import Link from 'next/link';
 import { Subscription } from '@/lib/services/subscriptions';
 import { SubscriptionPlan } from '@/lib/services/subscriptionPlans';
 import {
@@ -33,6 +36,31 @@ export default function SubscriptionsPage() {
     features: '',
     isActive: true,
   });
+  const [subFilter, setSubFilter] = useState<'all' | 'active' | 'expired'>('all');
+  const [userMap, setUserMap] = useState<Record<string, { name: string; phone: string }>>({});
+
+  useEffect(() => {
+    if (!subscriptions?.length) return;
+    const ids = subscriptions.map((s) => s.id).filter(Boolean) as string[];
+    const missing = ids.filter((id) => !userMap[id]);
+    if (!missing.length) return;
+
+    Promise.all(
+      missing.map(async (uid) => {
+        const snap = await getDoc(doc(db, 'users', uid));
+        return { uid, data: snap.exists() ? snap.data() : null };
+      })
+    ).then((results) => {
+      setUserMap((prev) => {
+        const next = { ...prev };
+        results.forEach(({ uid, data }) => {
+          next[uid] = { name: data?.name ?? '—', phone: data?.phone ?? '—' };
+        });
+        return next;
+      });
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subscriptions]);
 
   const loading = subscriptionsLoading || plansLoading;
   const error = subscriptionsError || plansError;
@@ -52,8 +80,11 @@ export default function SubscriptionsPage() {
       </div>
     );
   }
-
   const activeSubscriptions = subscriptions?.filter((s) => s.status === 'active') ?? [];
+  const allSubscriptions = subscriptions ?? [];
+  const filteredSubs = allSubscriptions.filter(
+    (s) => subFilter === 'all' || s.status === subFilter
+  );
   const subscriptionPlans = plans || [];
 
   const handleOpenDialog = (plan?: SubscriptionPlan) => {
@@ -239,6 +270,83 @@ export default function SubscriptionsPage() {
         )}
       </div>
 
+      {/* Customer Subscriptions Table */}
+      <div className="px-6 pb-6">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-foreground">Customer Subscriptions</h2>
+          <div className="flex gap-2">
+            {(['all', 'active', 'expired'] as const).map((s) => (
+              <button
+                key={s}
+                onClick={() => setSubFilter(s)}
+                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                  subFilter === s
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-card text-muted-foreground hover:bg-muted'
+                }`}
+              >
+                {s.charAt(0).toUpperCase() + s.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="rounded-xl border border-border bg-card overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/40">
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Customer</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Phone</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Plan</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Renewal</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Payment ID</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredSubs.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">
+                      No subscriptions found
+                    </td>
+                  </tr>
+                ) : (
+                  filteredSubs.map((sub) => {
+                    const uid = sub.id ?? '';
+                    const user = userMap[uid];
+                    return (
+                      <tr key={uid} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                        <td className="px-4 py-3">
+                          <Link href={`/dashboard/customers/${uid}?source=users`} className="hover:underline">
+                            <p className="font-medium text-foreground">{user?.name ?? '…'}</p>
+                            <p className="font-mono text-xs text-muted-foreground">{uid.slice(0, 12)}…</p>
+                          </Link>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-foreground">
+                          {user?.phone ?? '…'}
+                        </td>
+                        <td className="px-4 py-3 font-medium text-foreground capitalize">
+                          {(sub as SubDoc).planName || sub.plan || '—'}
+                        </td>
+                        <td className="px-4 py-3">
+                          <SubStatusBadge status={sub.status} />
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground text-sm">
+                          {formatSubTs((sub as SubDoc).renewalDate)}
+                        </td>
+                        <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                          {(sub as SubDoc).latestPaymentId || '—'}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       {/* Add/Edit Plan Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>
         <DialogContent>
@@ -326,5 +434,39 @@ export default function SubscriptionsPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+// ── Sub-table helpers ─────────────────────────────────────────────────────────
+
+interface SubDoc {
+  planName?: string;
+  renewalDate?: Timestamp | null;
+  latestPaymentId?: string;
+}
+
+function formatSubTs(ts: Timestamp | null | undefined): string {
+  if (!ts) return '—';
+  return ts.toDate().toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+function SubStatusBadge({ status }: { status?: string }) {
+  if (!status) return <span className="text-muted-foreground text-xs">—</span>;
+  const s = status.toLowerCase();
+  const cfg =
+    s === 'active'
+      ? { icon: <CheckCircle size={12} />, cls: 'bg-green-500/10 text-green-600' }
+      : s === 'expired'
+      ? { icon: <XCircle size={12} />, cls: 'bg-red-500/10 text-red-500' }
+      : { icon: <Clock size={12} />, cls: 'bg-yellow-500/10 text-yellow-600' };
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${cfg.cls}`}>
+      {cfg.icon}
+      {s.charAt(0).toUpperCase() + s.slice(1)}
+    </span>
   );
 }

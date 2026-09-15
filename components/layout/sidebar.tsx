@@ -8,6 +8,7 @@ import {
   UserCheck,
   Zap,
   Briefcase,
+  CreditCard,
   X,
   LogOut,
 } from 'lucide-react';
@@ -38,6 +39,11 @@ const navItems: NavItem[] = [
     name: 'Services',
     href: '/dashboard/services',
     icon: <Briefcase size={20} />,
+  },
+  {
+    name: 'Payments',
+    href: '/dashboard/payments',
+    icon: <CreditCard size={20} />,
   },
 ];
 
