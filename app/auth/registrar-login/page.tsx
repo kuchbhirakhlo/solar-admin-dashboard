@@ -6,12 +6,13 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
+
 import { auth, db } from '@/lib/firebase';
 import Image from 'next/image';
 
 export default function RegistrarLoginPage() {
   const router = useRouter();
-  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,32 +23,23 @@ export default function RegistrarLoginPage() {
     setError(null);
 
     try {
-      // Find registrar by phone number in Firestore
-      const { collection, query, where, getDocs } = await import('firebase/firestore');
-      const usersRef = collection(db, 'users');
-      const q = query(usersRef, where('phone', '==', phone), where('role', '==', 'registrar'));
-      const snapshot = await getDocs(q);
-
-      if (snapshot.empty) {
-        throw new Error('No registrar account found with this phone number');
-      }
-
-      const userDoc = snapshot.docs[0];
-      const userData = userDoc.data();
-      const email = userData.email;
-
-      if (!email) {
-        throw new Error('Registrar account has no email associated');
-      }
-
-      // Sign in with email and password
+      // Sign in directly with email + password (no pre-auth Firestore query)
       const result = await signInWithEmailAndPassword(auth, email, password);
+
+      // Verify this user is actually a registrar
+      const userSnap = await getDoc(doc(db, 'users', result.user.uid));
+      if (!userSnap.exists() || userSnap.data()?.role !== 'registrar') {
+        await import('firebase/auth').then(({ signOut: so }) => so(auth));
+        throw new Error('This account does not have registrar access');
+      }
+
+      const userData = userSnap.data()!;
 
       // Store session
       sessionStorage.setItem('registrarAuthenticated', 'true');
       sessionStorage.setItem('registrarUid', result.user.uid);
       sessionStorage.setItem('registrarName', userData.name || '');
-      sessionStorage.setItem('registrarPhone', phone);
+      sessionStorage.setItem('registrarPhone', userData.phone || '');
 
       router.push('/dashboard');
     } catch (err) {
@@ -79,7 +71,7 @@ export default function RegistrarLoginPage() {
           {/* Heading */}
           <h2 className="mb-2 text-3xl font-bold text-foreground">Registrar Portal</h2>
           <p className="mb-8 text-muted-foreground">
-            Sign in with your registered mobile number
+            Sign in with your email address and password
           </p>
 
           {/* Form */}
@@ -92,13 +84,13 @@ export default function RegistrarLoginPage() {
 
             <div>
               <label className="mb-2 block text-sm font-medium text-foreground">
-                Mobile Number
+                Email Address
               </label>
               <Input
-                type="tel"
-                placeholder="+91 98765 43210"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                type="email"
+                placeholder="name@solarexpert.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 disabled={loading}
                 required
                 className="w-full"

@@ -32,7 +32,7 @@ export default function NewServiceRequestPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchPhone, setSearchPhone] = useState('');
-  const [searchResults, setSearchResults] = useState<CustomerSearchResult[]>([]);
+  const [allCustomers, setAllCustomers] = useState<CustomerSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerSearchResult | null>(null);
 
@@ -48,6 +48,7 @@ export default function NewServiceRequestPage() {
 
   useEffect(() => {
     fetchEngineers();
+    fetchAllCustomers();
   }, []);
 
   const fetchEngineers = async () => {
@@ -65,25 +66,53 @@ export default function NewServiceRequestPage() {
     }
   };
 
-  const searchCustomer = async () => {
-    if (!searchPhone.trim()) return;
+  const fetchAllCustomers = async () => {
     setSearching(true);
-    setSearchResults([]);
     try {
-      const customersRef = collection(db, 'customers');
-      const q = query(customersRef, where('phone', '==', searchPhone.trim()));
-      const snapshot = await getDocs(q);
-      const results = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as CustomerSearchResult[];
-      setSearchResults(results);
+      // Fetch from both collections in parallel
+      const [customersSnap, usersSnap] = await Promise.all([
+        getDocs(collection(db, 'customers')),
+        getDocs(query(collection(db, 'users'), where('role', '==', 'customer'))),
+      ]);
+
+      const seen = new Set<string>();
+      const results: CustomerSearchResult[] = [];
+
+      customersSnap.docs.forEach((doc) => {
+        const d = doc.data();
+        const key = d.phone || doc.id;
+        if (!seen.has(key)) {
+          seen.add(key);
+          results.push({ id: doc.id, name: d.name || '', phone: d.phone || '', email: d.email, address: d.address });
+        }
+      });
+
+      usersSnap.docs.forEach((doc) => {
+        const d = doc.data();
+        const key = d.phone || doc.id;
+        if (!seen.has(key)) {
+          seen.add(key);
+          results.push({ id: doc.id, name: d.name || '', phone: d.phone || '', email: d.email, address: d.address });
+        }
+      });
+
+      setAllCustomers(results);
     } catch (err) {
-      console.error('Search failed:', err);
+      console.error('Failed to load customers:', err);
     } finally {
       setSearching(false);
     }
   };
+
+  const searchResults = allCustomers.filter((c) => {
+    const q = searchPhone.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      c.phone.includes(q) ||
+      c.name.toLowerCase().includes(q) ||
+      (c.email || '').toLowerCase().includes(q)
+    );
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -153,7 +182,7 @@ export default function NewServiceRequestPage() {
         }
       />
 
-      <div className="px-6 py-6 max-w-2xl">
+      <div className="px-6 py-6">
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Customer Selection */}
           <div className="rounded-lg border border-border bg-card p-6">
@@ -163,20 +192,23 @@ export default function NewServiceRequestPage() {
 
             {!selectedCustomer ? (
               <>
-                <div className="flex gap-2 mb-4">
+                <div className="relative mb-3">
+                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                   <Input
-                    placeholder="Search by phone number..."
+                    placeholder="Search by name, phone or email..."
                     value={searchPhone}
                     onChange={(e) => setSearchPhone(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), searchCustomer())}
+                    className="pl-9"
                   />
-                  <Button type="button" onClick={searchCustomer} disabled={searching}>
-                    {searching ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
-                    Search
-                  </Button>
                 </div>
 
-                {searchResults.length > 0 ? (
+                {searching ? (
+                  <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
+                    <Loader2 size={14} className="animate-spin" /> Loading customers...
+                  </div>
+                ) : !searchPhone.trim() ? (
+                  <p className="text-sm text-muted-foreground py-2">Type a name, phone, or email to search</p>
+                ) : searchResults.length > 0 ? (
                   <div className="space-y-2">
                     {searchResults.map((customer) => (
                       <div
@@ -197,9 +229,9 @@ export default function NewServiceRequestPage() {
                       </div>
                     ))}
                   </div>
-                ) : searchPhone && !searching ? (
-                  <p className="text-sm text-muted-foreground">No customers found with this phone number</p>
-                ) : null}
+                ) : (
+                  <p className="text-sm text-muted-foreground py-2">No customers match your search</p>
+                )}
               </>
             ) : (
               <div className="flex items-center justify-between rounded-lg border border-primary/50 bg-primary/5 p-3">

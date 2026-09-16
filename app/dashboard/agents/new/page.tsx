@@ -6,82 +6,43 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/layout/page-header';
 import { addEmployee } from '@/lib/services/users';
-import { Eye, EyeOff, RefreshCw, Copy, Check } from 'lucide-react';
+import { Copy, Check } from 'lucide-react';
 
 export default function AddEmployeePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [generatedEmail, setGeneratedEmail] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong'>('medium');
+  const [createdPassword, setCreatedPassword] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     phone: '',
-    password: '',
     status: 'active',
     role: 'engineer',
   });
 
-  /**
-   * Generate a secure random password
-   */
-  const generatePassword = () => {
+  const generateStrongPassword = (): string => {
     const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     const lower = 'abcdefghijklmnopqrstuvwxyz';
     const digits = '0123456789';
     const special = '!@#$%^&*';
-    
-    // Ensure at least one of each type
+    const all = upper + lower + digits + special;
     const required = [
       upper[Math.floor(Math.random() * upper.length)],
       lower[Math.floor(Math.random() * lower.length)],
       digits[Math.floor(Math.random() * digits.length)],
       special[Math.floor(Math.random() * special.length)],
     ];
-    
-    // Fill the rest to make 12 characters total
-    const all = upper + lower + digits + special;
-    const remaining = Array.from({ length: 8 }, () =>
-      all[Math.floor(Math.random() * all.length)]
-    );
-    
-    // Shuffle all characters together
-    const password = [...required, ...remaining]
-      .sort(() => Math.random() - 0.5)
-      .join('');
-    
-    setFormData((prev) => ({ ...prev, password }));
-    evaluatePasswordStrength(password);
-    setCopied(false);
+    const remaining = Array.from({ length: 8 }, () => all[Math.floor(Math.random() * all.length)]);
+    return [...required, ...remaining].sort(() => Math.random() - 0.5).join('');
   };
 
-  /**
-   * Evaluate password strength
-   */
-  const evaluatePasswordStrength = (password: string) => {
-    let score = 0;
-    if (password.length >= 8) score++;
-    if (password.length >= 12) score++;
-    if (/[A-Z]/.test(password)) score++;
-    if (/[a-z]/.test(password)) score++;
-    if (/[0-9]/.test(password)) score++;
-    if (/[^A-Za-z0-9]/.test(password)) score++;
-    
-    if (score <= 2) setPasswordStrength('weak');
-    else if (score <= 4) setPasswordStrength('medium');
-    else setPasswordStrength('strong');
-  };
-
-  /**
-   * Copy password to clipboard
-   */
   const copyPassword = async () => {
-    if (formData.password) {
-      await navigator.clipboard.writeText(formData.password);
+    if (createdPassword) {
+      await navigator.clipboard.writeText(createdPassword);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
@@ -102,36 +63,30 @@ export default function AddEmployeePage() {
     }
   };
 
-  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const password = e.target.value;
-    setFormData((prev) => ({ ...prev, password }));
-    evaluatePasswordStrength(password);
-    setCopied(false);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setCreatedPassword(null);
 
-    // Validate password
-    if (formData.role !== 'agent' && (!formData.password || formData.password.length < 6)) {
-      setError('Password must be at least 6 characters long');
-      setLoading(false);
-      return;
-    }
+    const autoPassword = generateStrongPassword();
 
     try {
       await addEmployee({
         name: formData.name,
         email: formData.email,
         phone: formData.role === 'agent' ? formData.phone : formData.phone.replace(/^\s*\+?91[\s-]*/, '').replace(/[\s-]/g, ''),
-        password: formData.password,
+        password: autoPassword,
         role: formData.role as 'engineer' | 'registrar' | 'agent',
         status: formData.status as 'active' | 'inactive' | 'suspended',
       });
 
-      router.push('/dashboard/agents');
+      // Show one-time password to admin for registrar accounts (they need it for dashboard login)
+      if (formData.role === 'registrar') {
+        setCreatedPassword(autoPassword);
+      } else {
+        router.push('/dashboard/agents');
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to create employee';
       setError(message);
@@ -144,22 +99,6 @@ export default function AddEmployeePage() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const getPasswordStrengthColor = () => {
-    switch (passwordStrength) {
-      case 'weak': return 'bg-red-500';
-      case 'medium': return 'bg-yellow-500';
-      case 'strong': return 'bg-green-500';
-    }
-  };
-
-  const getPasswordStrengthLabel = () => {
-    switch (passwordStrength) {
-      case 'weak': return 'Weak';
-      case 'medium': return 'Medium';
-      case 'strong': return 'Strong';
-    }
   };
 
   return (
@@ -232,80 +171,12 @@ export default function AddEmployeePage() {
             </div>
           </div>
 
-          {/* Password Section */}
-          {formData.role !== 'agent' && <div className="border-t border-border pt-6">
-            <h2 className="mb-4 text-lg font-semibold text-foreground">
-              Login Password
-            </h2>
-            <p className="text-sm text-muted-foreground mb-4">
-              Set a password for the employee to login. The password will be used to create their Firebase Auth account.
+          {/* Info note — no password needed */}
+          <div className="border-t border-border pt-6">
+            <p className="text-sm text-muted-foreground rounded-lg bg-muted/50 px-4 py-3">
+              A secure password will be auto-generated. Partners log in via mobile OTP. Registrars &amp; Engineers receive their password after account creation.
             </p>
-            <div className="space-y-3">
-              <div className="relative">
-                <Input
-                  name="password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Enter or generate a password"
-                  value={formData.password}
-                  onChange={handlePasswordChange}
-                  className="pr-24"
-                  required
-                  minLength={6}
-                />
-                <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={copyPassword}
-                    className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                    title="Copy password"
-                  >
-                    {copied ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                    title={showPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={generatePassword}
-                    className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                    title="Generate strong password"
-                  >
-                    <RefreshCw size={16} />
-                  </button>
-                </div>
-              </div>
-
-              {/* Password Strength Indicator */}
-              {formData.password && (
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all duration-300 ${getPasswordStrengthColor()}`}
-                      style={{
-                        width: passwordStrength === 'weak' ? '33%' : passwordStrength === 'medium' ? '66%' : '100%',
-                      }}
-                    />
-                  </div>
-                  <span className={`text-xs font-medium ${
-                    passwordStrength === 'weak' ? 'text-red-500' :
-                    passwordStrength === 'medium' ? 'text-yellow-500' : 'text-green-500'
-                  }`}>
-                    {getPasswordStrengthLabel()}
-                  </span>
-                </div>
-              )}
-
-              <p className="text-xs text-muted-foreground">
-                Use the generate button to create a strong password, or enter a custom one (minimum 6 characters).
-                Share this password securely with the employee — they will use it along with their email to login.
-              </p>
-            </div>
-          </div>}
+          </div>
 
           {/* Role Selection */}
           <div className="border-t border-border pt-6">
@@ -363,23 +234,50 @@ export default function AddEmployeePage() {
             </div>
           )}
 
-          {/* Actions */}
-          <div className="border-t border-border pt-6 flex gap-3 justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => router.push('/dashboard/agents')}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
-              disabled={loading}
-            >
-              {loading ? 'Creating...' : 'Create Employee'}
-            </Button>
-          </div>
+          {/* One-time password banner for registrar */}
+          {createdPassword ? (
+            <div className="border-t border-border pt-6">
+              <div className="rounded-lg border border-green-500/30 bg-green-500/10 p-4">
+                <p className="text-sm font-semibold text-green-600 mb-1">Registrar created successfully!</p>
+                <p className="text-xs text-muted-foreground mb-3">Share this temporary password with the registrar for their first login. It will not be shown again.</p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 rounded bg-muted px-3 py-2 font-mono text-sm break-all">{createdPassword}</code>
+                  <button
+                    type="button"
+                    onClick={copyPassword}
+                    className="p-2 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
+                    title="Copy password"
+                  >
+                    {copied ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
+                  </button>
+                </div>
+                <Button
+                  type="button"
+                  onClick={() => router.push('/dashboard/agents')}
+                  className="mt-3 w-full"
+                >
+                  Go to Employees
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="border-t border-border pt-6 flex gap-3 justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => router.push('/dashboard/agents')}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
+                disabled={loading}
+              >
+                {loading ? 'Creating...' : 'Create Employee'}
+              </Button>
+            </div>
+          )}
         </form>
       </div>
     </div>

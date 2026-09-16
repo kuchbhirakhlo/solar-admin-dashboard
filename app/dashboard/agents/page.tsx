@@ -3,11 +3,13 @@
 import { useState } from 'react';
 import { useFirestoreCollectionRealtime } from '@/lib/hooks/useFirestore';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/layout/page-header';
 import { StatusBadge } from '@/components/dashboard/status-badge';
-import { Plus, MapPin, Phone } from 'lucide-react';
+import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { User } from '@/lib/services/users';
-import { where } from 'firebase/firestore';
+import { where, doc, deleteDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import Link from 'next/link';
 import {
   Dialog,
@@ -15,8 +17,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { ProjectStatusBar } from '@/components/dashboard/project-status-bar';
-import { Customer } from '@/lib/services/customers';
 
 export default function EmployeePage() {
   const { data: users, loading, error } =
@@ -24,17 +24,62 @@ export default function EmployeePage() {
       where('role', 'in', ['agent', 'engineer', 'registrar', 'partner']),
     ]);
 
-  const Employee = users;
+  const [editEmployee, setEditEmployee] = useState<User | null>(null);
+  const [editForm, setEditForm] = useState({ name: '', email: '', phone: '', role: '', status: '' });
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
-  const [selectedAgent, setSelectedAgent] = useState<User | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [agentCustomers, setAgentCustomers] = useState<Customer[]>([]);
-  const [loadingCustomers, setLoadingCustomers] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
-  const toggleEmployeeStatus = async (
-    employeeId: string | undefined,
-    currentStatus: string
-  ) => {
+  const openEdit = (employee: User) => {
+    setEditEmployee(employee);
+    setEditForm({
+      name: employee.name || '',
+      email: employee.email || '',
+      phone: employee.phone || '',
+      role: employee.role || '',
+      status: employee.status || 'active',
+    });
+    setEditError(null);
+  };
+
+  const handleEditSave = async () => {
+    if (!editEmployee?.id) return;
+    setEditLoading(true);
+    setEditError(null);
+    try {
+      const { updateFirestoreDoc } = await import('@/lib/hooks/useFirestore');
+      await updateFirestoreDoc('users', editEmployee.id, {
+        name: editForm.name,
+        email: editForm.email,
+        phone: editForm.phone,
+        role: editForm.role,
+        status: editForm.status,
+        updatedAt: Date.now(),
+      });
+      setEditEmployee(null);
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : 'Failed to update employee');
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget?.id) return;
+    setDeleteLoading(true);
+    try {
+      await deleteDoc(doc(db, 'users', deleteTarget.id));
+      setDeleteTarget(null);
+    } catch (err) {
+      console.error('Failed to delete employee:', err);
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const toggleEmployeeStatus = async (employeeId: string | undefined, currentStatus: string) => {
     if (!employeeId) return;
     const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
     try {
@@ -45,29 +90,15 @@ export default function EmployeePage() {
     }
   };
 
-  const openDetails = async (agent: User) => {
-    setSelectedAgent(agent);
-    setDialogOpen(true);
-    
-    // Fetch customers associated with this agent
-    if (agent.customerId) {
-      setLoadingCustomers(true);
-      try {
-        const { useFirestoreDoc } = await import('@/lib/hooks/useFirestore');
-        // For now, we'll just show the agent's assigned customer if available
-        // In a real app, you'd query customers by agentId
-        setAgentCustomers([]);
-      } catch (err) {
-        console.error('Failed to load agent customers:', err);
-      } finally {
-        setLoadingCustomers(false);
-      }
-    }
+  const roleLabel = (role: string) => {
+    if (role === 'agent' || role === 'partner') return 'Partner';
+    if (role === 'registrar') return 'Registrar';
+    if (role === 'engineer') return 'Engineer';
+    return role;
   };
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
       <PageHeader
         title="Employees"
         description="Manage your employees - engineers, registrars, and partners"
@@ -81,7 +112,6 @@ export default function EmployeePage() {
         }
       />
 
-      {/* Employee Table */}
       <div className="px-6 py-6">
         {error && (
           <p className="text-sm text-red-500 mb-4">Failed to load employees: {error}</p>
@@ -103,168 +133,127 @@ export default function EmployeePage() {
               <tbody className="divide-y divide-border">
                 {loading && (
                   <tr>
-                    <td
-                      colSpan={7}
-                      className="px-6 py-4 text-center text-muted-foreground"
-                    >
+                    <td colSpan={6} className="px-6 py-4 text-center text-muted-foreground">
                       Loading employees...
                     </td>
                   </tr>
                 )}
-                {!loading &&
-                  Employee?.map((employee) => (
-                    <tr
-                      key={employee.id}
-                      className="hover:bg-muted/50 transition-colors"
-                    >
-                      <td className="px-6 py-4 font-medium text-foreground">
-                        {employee.name}
-                      </td>
-                      <td className="px-6 py-4 text-muted-foreground">
-                        {employee.email}
-                      </td>
-                      <td className="px-6 py-4 text-muted-foreground">
-                        {employee.phone}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                          {employee.role === 'agent' ? 'Partner' : employee.role === 'registrar' ? 'Registrar' : employee.role === 'engineer' ? 'Engineer' : employee.role === 'partner' ? 'Partner' : employee.role}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <StatusBadge status={(employee.status as any) || 'active'} />
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openDetails(employee)}
-                          >
-                            View Details
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant={
-                              employee.status === 'active'
-                                ? 'destructive'
-                                : 'default'
-                            }
-                            onClick={() =>
-                              toggleEmployeeStatus(
-                                employee.id,
-                                employee.status || 'active'
-                              )
-                            }
-                          >
-                            {employee.status === 'active'
-                              ? 'Deactivate'
-                              : 'Activate'}
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                {!loading && users?.map((employee) => (
+                  <tr key={employee.id} className="hover:bg-muted/50 transition-colors">
+                    <td className="px-6 py-4 font-medium text-foreground">{employee.name}</td>
+                    <td className="px-6 py-4 text-muted-foreground">{employee.email}</td>
+                    <td className="px-6 py-4 text-muted-foreground">{employee.phone}</td>
+                    <td className="px-6 py-4">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                        {roleLabel(employee.role || '')}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <StatusBadge status={(employee.status as any) || 'active'} />
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => openEdit(employee)}>
+                          <Pencil size={14} className="mr-1" /> Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={employee.status === 'active' ? 'destructive' : 'default'}
+                          onClick={() => toggleEmployeeStatus(employee.id, employee.status || 'active')}
+                        >
+                          {employee.status === 'active' ? 'Deactivate' : 'Activate'}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => setDeleteTarget(employee)}
+                        >
+                          <Trash2 size={14} />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
         </div>
       </div>
 
-      {/* Agent Details Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl">
+      {/* Edit Dialog */}
+      <Dialog open={!!editEmployee} onOpenChange={(open) => !open && setEditEmployee(null)}>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Employee Details</DialogTitle>
+            <DialogTitle>Edit Employee</DialogTitle>
           </DialogHeader>
-          {selectedAgent && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs text-muted-foreground">Full Name</p>
-                  <p className="text-sm font-medium text-foreground">
-                    {selectedAgent.name}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Email</p>
-                  <p className="text-sm font-medium text-foreground">
-                    {selectedAgent.email}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Phone</p>
-                  <p className="text-sm font-medium text-foreground">
-                    {selectedAgent.phone}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Status</p>
-                  <StatusBadge status={(selectedAgent.status as any) || 'active'} />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Role</p>
-                  <p className="text-sm font-medium text-foreground">
-                    {selectedAgent.role}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Created At</p>
-                  <p className="text-sm font-medium text-foreground">
-                    {selectedAgent.createdAt
-                      ? new Date(selectedAgent.createdAt).toLocaleString()
-                      : '-'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Updated At</p>
-                  <p className="text-sm font-medium text-foreground">
-                    {selectedAgent.updatedAt
-                      ? new Date(selectedAgent.updatedAt).toLocaleString()
-                      : '-'}
-                  </p>
-                </div>
-              </div>
-
-              {/* Assigned Customers Section */}
-              {selectedAgent.customerId && (
-                <div className="border-t border-border pt-4">
-                  <h3 className="text-sm font-semibold text-foreground mb-3">
-                    Assigned Customers
-                  </h3>
-                  {loadingCustomers ? (
-                    <p className="text-sm text-muted-foreground">Loading customers...</p>
-                  ) : agentCustomers.length > 0 ? (
-                    <div className="space-y-3">
-                      {agentCustomers.map((customer) => (
-                        <div
-                          key={customer.id}
-                          className="rounded-lg border border-border p-3"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="font-medium text-foreground">{customer.name}</p>
-                              <p className="text-xs text-muted-foreground">{customer.email}</p>
-                            </div>
-                            <StatusBadge status={customer.status as any} />
-                          </div>
-                          <div className="mt-3">
-                            <p className="text-xs text-muted-foreground mb-2">Project Status</p>
-                            <ProjectStatusBar 
-                              currentStatus={customer.projectStatus || 'registration'} 
-                              readonly={true}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No customers assigned</p>
-                  )}
-                </div>
-              )}
+          <div className="space-y-4 pt-2">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Full Name</label>
+              <Input value={editForm.name} onChange={(e) => setEditForm((p) => ({ ...p, name: e.target.value }))} />
             </div>
-          )}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Email</label>
+              <Input type="email" value={editForm.email} onChange={(e) => setEditForm((p) => ({ ...p, email: e.target.value }))} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Phone</label>
+              <Input type="tel" value={editForm.phone} onChange={(e) => setEditForm((p) => ({ ...p, phone: e.target.value }))} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Role</label>
+                <select
+                  value={editForm.role}
+                  onChange={(e) => setEditForm((p) => ({ ...p, role: e.target.value }))}
+                  className="w-full rounded-lg border border-border bg-card px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="engineer">Engineer</option>
+                  <option value="registrar">Registrar</option>
+                  <option value="agent">Partner</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Status</label>
+                <select
+                  value={editForm.status}
+                  onChange={(e) => setEditForm((p) => ({ ...p, status: e.target.value }))}
+                  className="w-full rounded-lg border border-border bg-card px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="suspended">Suspended</option>
+                </select>
+              </div>
+            </div>
+            {editError && (
+              <p className="text-sm text-destructive">{editError}</p>
+            )}
+            <div className="flex justify-end gap-3 pt-2">
+              <Button variant="outline" onClick={() => setEditEmployee(null)}>Cancel</Button>
+              <Button onClick={handleEditSave} disabled={editLoading}>
+                {editLoading ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirm Dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete Employee</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground py-2">
+            Are you sure you want to delete <span className="font-semibold text-foreground">{deleteTarget?.name}</span>? This action cannot be undone.
+          </p>
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleteLoading}>
+              {deleteLoading ? 'Deleting...' : 'Delete'}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
