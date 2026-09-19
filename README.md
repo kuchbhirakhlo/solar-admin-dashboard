@@ -57,6 +57,13 @@ Your local `.env` does not configure the Vercel environment. Paste the private k
 without surrounding quotes; actual newlines and literal `\n` are supported. Use a
 service account from the same Firebase project as the public client configuration.
 
+`vercel.json` enables `NODE_OPTIONS=--experimental-require-module` for deployed
+functions. Firebase Admin's `jwks-rsa` dependency loads the ESM-only `jose` package
+using `require()`. Vercel disables this Node.js capability by default, which otherwise
+causes `ERR_REQUIRE_ESM` before credentials are read. Keep this flag enabled if you
+configure `NODE_OPTIONS` in Vercel project settings, and redeploy after changing it.
+See [Vercel's runtime documentation](https://vercel.com/docs/functions/runtimes/node-js/advanced-node-configuration#experimental-nodejs-require-of-es-module).
+
 If partner creation fails, inspect Vercel runtime logs for `POST /api/partners`.
 `admin/missing-credentials` means the service-account configuration is incomplete;
 other Firebase error codes identify credential, permission, or database failures.
