@@ -22,6 +22,7 @@ export default function AddEmployeePage() {
     phone: '',
     status: 'active',
     role: 'engineer',
+    password: '',
   });
 
   const generateStrongPassword = (): string => {
@@ -65,25 +66,31 @@ export default function AddEmployeePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading || createdPassword) return;
+    if (formData.role === 'registrar' && formData.password.length < 6) {
+      setError('Enter a registrar password with at least 6 characters.');
+      return;
+    }
     setLoading(true);
     setError(null);
     setCreatedPassword(null);
 
-    const autoPassword = generateStrongPassword();
+    const password = formData.role === 'registrar' ? formData.password : generateStrongPassword();
 
     try {
       await addEmployee({
         name: formData.name,
         email: formData.email,
         phone: formData.role === 'agent' ? formData.phone : formData.phone.replace(/^\s*\+?91[\s-]*/, '').replace(/[\s-]/g, ''),
-        password: autoPassword,
+        password,
         role: formData.role as 'engineer' | 'registrar' | 'agent',
         status: formData.status as 'active' | 'inactive' | 'suspended',
       });
 
-      // Show one-time password to admin for registrar accounts (they need it for dashboard login)
+      // Confirm the password the admin set for registrar login.
       if (formData.role === 'registrar') {
-        setCreatedPassword(autoPassword);
+        setCreatedPassword(password);
+        setFormData((prev) => ({ ...prev, password: '' }));
       } else {
         router.push('/dashboard/agents');
       }
@@ -98,7 +105,7 @@ export default function AddEmployeePage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value, ...(name === 'role' ? { password: '' } : {}) }));
   };
 
   return (
@@ -171,13 +178,6 @@ export default function AddEmployeePage() {
             </div>
           </div>
 
-          {/* Info note — no password needed */}
-          <div className="border-t border-border pt-6">
-            <p className="text-sm text-muted-foreground rounded-lg bg-muted/50 px-4 py-3">
-              A secure password will be auto-generated. Partners log in via mobile OTP. Registrars &amp; Engineers receive their password after account creation.
-            </p>
-          </div>
-
           {/* Role Selection */}
           <div className="border-t border-border pt-6">
             <h2 className="mb-4 text-lg font-semibold text-foreground">
@@ -205,7 +205,31 @@ export default function AddEmployeePage() {
             </div>
           </div>
 
-          {/* Status */}
+          {/* Registrar login password */}
+          {formData.role === 'registrar' && !createdPassword && (
+            <div className="border-t border-border pt-6">
+              <label htmlFor="registrar-password" className="block text-sm font-medium text-foreground mb-2">
+                Registrar Password
+              </label>
+              <Input
+                id="registrar-password"
+                name="password"
+                type="password"
+                autoComplete="new-password"
+                placeholder="Create a password"
+                value={formData.password}
+                onChange={handleChange}
+                minLength={6}
+                required
+                disabled={loading}
+                aria-describedby="registrar-password-help"
+              />
+              <p id="registrar-password-help" className="mt-1 text-xs text-muted-foreground">
+                Use at least 6 characters. The registrar can log in with their email and this password.
+              </p>
+            </div>
+          )}
+
           <div className="border-t border-border pt-6">
             <h2 className="mb-4 text-lg font-semibold text-foreground">
               Account Status
@@ -239,7 +263,7 @@ export default function AddEmployeePage() {
             <div className="border-t border-border pt-6">
               <div className="rounded-lg border border-green-500/30 bg-green-500/10 p-4">
                 <p className="text-sm font-semibold text-green-600 mb-1">Registrar created successfully!</p>
-                <p className="text-xs text-muted-foreground mb-3">Share this temporary password with the registrar for their first login. It will not be shown again.</p>
+                <p className="text-xs text-muted-foreground mb-3">Share the account email and this password with the registrar to log in through the Registrar Portal. This password will not be shown again after leaving this page.</p>
                 <div className="flex items-center gap-2">
                   <code className="flex-1 rounded bg-muted px-3 py-2 font-mono text-sm break-all">{createdPassword}</code>
                   <button
