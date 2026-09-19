@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { normalizePartnerPhone } from '@/lib/partner-phone';
 
 export const runtime = 'nodejs';
@@ -9,11 +8,19 @@ export async function POST(request: Request) {
   if (!token) return NextResponse.json({ error: 'Sign in as an administrator.' }, { status: 401 });
 
   try {
+    // Keep SDK loading inside the error boundary so initialization failures
+    // return JSON instead of Next.js's HTML error page.
+    const { getFirebaseAdmin } = await import('@/lib/firebase-admin');
     const { auth, db } = getFirebaseAdmin();
     let uid: string;
     try {
       uid = (await auth.verifyIdToken(token, true)).uid;
-    } catch {
+    } catch (error) {
+      const code = (error as { code?: string }).code;
+      if (!['auth/argument-error', 'auth/invalid-id-token', 'auth/id-token-expired',
+        'auth/id-token-revoked', 'auth/user-disabled', 'auth/user-not-found'].includes(code || '')) {
+        throw error;
+      }
       return NextResponse.json({ error: 'Your session has expired. Sign in again.' }, { status: 401 });
     }
     const profiles = await db.getAll(db.doc(`users/${uid}`), db.doc(`admins/${uid}`));

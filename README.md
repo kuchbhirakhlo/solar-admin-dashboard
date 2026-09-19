@@ -50,6 +50,19 @@ On Google infrastructure, Application Default Credentials can be used instead. N
 prefix credentials with `NEXT_PUBLIC_` or commit a service-account key. The app must
 run with a Next.js server; the API route cannot run on static-only hosting.
 
+For Vercel deployments, use Node.js 24.x (declared in `package.json`; the installed
+Firebase Admin SDK requires Node.js 22 or newer). Add all three Admin variables in
+Project Settings → Environment Variables with **Production** selected, then redeploy.
+Your local `.env` does not configure the Vercel environment. Paste the private key
+without surrounding quotes; actual newlines and literal `\n` are supported. Use a
+service account from the same Firebase project as the public client configuration.
+
+If partner creation fails, inspect Vercel runtime logs for `POST /api/partners`.
+`admin/missing-credentials` means the service-account configuration is incomplete;
+other Firebase error codes identify credential, permission, or database failures.
+An HTML 500 response may indicate a function startup failure before the route can
+return JSON, so inspect the runtime exception as well as the browser console.
+
 Enable Phone under Firebase Authentication sign-in providers and configure SMS regions
 and the mobile app's Firebase phone authentication prerequisites. The mobile app must
 complete Firebase's OTP verification and read `users/{authenticated uid}`. Account

@@ -80,8 +80,19 @@ export async function addEmployee(employee: {
         role: employee.role, status: employee.status,
       }),
     });
-    const result = await response.json();
+    let result;
+    try {
+      result = await response.json();
+    } catch {
+      throw new Error(`Partner service returned an invalid response (HTTP ${response.status}). Check the Vercel runtime logs and Firebase Admin configuration before retrying.`);
+    }
+    if (!result || typeof result !== 'object') {
+      throw new Error('Partner service returned an invalid response. Check the Vercel runtime logs before retrying.');
+    }
     if (!response.ok) throw new Error(result.error || 'Failed to create partner.');
+    if (typeof result.uid !== 'string' || !result.uid) {
+      throw new Error('Partner service did not confirm account creation. Check the account before retrying.');
+    }
     return result as { uid: string };
   }
 
